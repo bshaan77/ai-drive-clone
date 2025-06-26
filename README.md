@@ -19,7 +19,7 @@ This is a learning project that showcases the development of a Google Drive clon
 
 - Node.js 18+
 - pnpm
-- PostgreSQL database (Neon recommended)
+- PostgreSQL 15 database (Neon recommended)
 - Clerk account for authentication
 - Vercel account for deployment
 

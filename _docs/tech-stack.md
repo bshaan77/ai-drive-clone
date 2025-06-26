@@ -36,18 +36,23 @@ This document outlines the complete technology stack for the Google Drive clone 
 
 - **Purpose**: Primary relational database for storing application data
 - **Key Features**: ACID compliance, JSON support, full-text search capabilities
+- **Version**: **PostgreSQL 15** (recommended for Neon)
 - **Why Chosen**: Robust, feature-rich, excellent performance for our use case
+- **Compatibility**: Fully compatible with Drizzle ORM v0.41+ and postgres driver v3.4+
 
 ### **ORM:** Drizzle
 
 - **Purpose**: Type-safe database query builder and schema management
 - **Key Features**: SQL-like syntax, excellent TypeScript support, migrations
+- **Version**: v0.41.0 (current project version)
 - **Why Chosen**: Performance-focused, type-safe, modern approach to database access
+- **PostgreSQL Support**: Full support for PostgreSQL 15 features
 
 ### **Database Platform:** Supabase
 
 - **Purpose**: Backend-as-a-Service with PostgreSQL, auth, and real-time features
 - **Key Features**: Built-in authentication, real-time subscriptions, auto-generated APIs
+- **PostgreSQL Version**: PostgreSQL 15 (latest stable)
 - **Why Chosen**: Simplifies backend development, provides additional features beyond just database
 
 ## Authentication & User Management
