@@ -5,7 +5,7 @@
  * file type detection, and metadata storage.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
