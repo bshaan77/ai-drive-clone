@@ -32,6 +32,7 @@ import {
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog";
 import type { FileRecord } from "~/types/file";
+import { CreateFolderDialog } from "~/components/file-display/CreateFolderDialog";
 
 const breadcrumbs = [{ name: "My Drive", href: "/" }];
 
@@ -54,6 +55,7 @@ export function MainContent() {
     isOpen: boolean;
     fileIds: string[];
   }>({ isOpen: false, fileIds: [] });
+  const [createFolderDialog, setCreateFolderDialog] = useState(false);
 
   const { uploadFiles, isUploading, uploadProgress, uploadError, clearError } =
     useFileUpload();
@@ -426,6 +428,13 @@ export function MainContent() {
               <Plus className="mr-2 h-4 w-4" />
               Upload files
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => setCreateFolderDialog(true)}
+            >
+              <Folder className="mr-2 h-4 w-4" />
+              New Folder
+            </Button>
             {hasFiles && (
               <Button
                 variant="outline"
@@ -477,10 +486,7 @@ export function MainContent() {
         {shouldShowUploadZone && (
           <BulkContextMenu
             onUpload={() => setShowUploadModal(true)}
-            onNewFolder={() => {
-              // TODO: Implement folder creation
-              console.log("New folder clicked");
-            }}
+            onNewFolder={() => setCreateFolderDialog(true)}
           >
             <div
               className={`relative rounded-lg border-2 border-dashed transition-all duration-200 ${
@@ -573,10 +579,7 @@ export function MainContent() {
         {hasFiles && (
           <BulkContextMenu
             onUpload={() => setShowUploadModal(true)}
-            onNewFolder={() => {
-              // TODO: Implement folder creation
-              console.log("New folder clicked");
-            }}
+            onNewFolder={() => setCreateFolderDialog(true)}
             onBulkDownload={handleBulkDownload}
             onBulkShare={handleBulkShare}
             onBulkRename={handleBulkRename}
@@ -637,6 +640,15 @@ export function MainContent() {
             </div>
           </BulkContextMenu>
         )}
+
+        {/* Create Folder Dialog */}
+        <CreateFolderDialog
+          isOpen={createFolderDialog}
+          onClose={() => setCreateFolderDialog(false)}
+          onCreateFolder={async (folderName) => {
+            // TODO: Implement API call and update folder list
+          }}
+        />
       </div>
 
       {/* Floating Action Button (Mobile) */}
