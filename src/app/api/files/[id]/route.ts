@@ -54,6 +54,7 @@ export async function GET(
         size: fileRecord.size,
         blobUrl: fileRecord.blobUrl,
         createdAt: fileRecord.createdAt,
+        folderId: fileRecord.folderId,
       },
     });
   } catch (error) {
