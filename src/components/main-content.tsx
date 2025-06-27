@@ -33,8 +33,8 @@ import {
 } from "~/components/ui/alert-dialog";
 import type { FileRecord } from "~/types/file";
 import { CreateFolderDialog } from "~/components/file-display/CreateFolderDialog";
-
-const breadcrumbs = [{ name: "My Drive", href: "/" }];
+import { FolderCard } from "~/components/file-display/FolderCard";
+import { FileCard } from "~/components/file-display/FileCard";
 
 export function MainContent() {
   const [files, setFiles] = useState<FileRecord[]>([]);
@@ -56,6 +56,23 @@ export function MainContent() {
     fileIds: string[];
   }>({ isOpen: false, fileIds: [] });
   const [createFolderDialog, setCreateFolderDialog] = useState(false);
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [folders, setFolders] = useState<
+    Array<{
+      id: string;
+      name: string;
+      createdAt: string;
+      updatedAt: string;
+      parentId?: string;
+    }>
+  >([]);
+  const [isLoadingFolders, setIsLoadingFolders] = useState(false);
+  const [folderPath, setFolderPath] = useState<
+    Array<{
+      id: string;
+      name: string;
+    }>
+  >([]);
 
   const { uploadFiles, isUploading, uploadProgress, uploadError, clearError } =
     useFileUpload();
@@ -68,7 +85,11 @@ export function MainContent() {
   const fetchFiles = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/files");
+      const url = currentFolderId
+        ? `/api/files?folderId=${currentFolderId}`
+        : "/api/files";
+
+      const response = await fetch(url);
       const data = (await response.json()) as {
         success: boolean;
         files?: FileRecord[];
@@ -86,12 +107,93 @@ export function MainContent() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentFolderId]);
 
   // Load files on component mount
   useEffect(() => {
     void fetchFiles();
   }, [fetchFiles]);
+
+  // Fetch folders for current location
+  const fetchFolders = useCallback(async () => {
+    try {
+      setIsLoadingFolders(true);
+      const url = currentFolderId
+        ? `/api/folders?parentId=${currentFolderId}`
+        : "/api/folders";
+
+      const response = await fetch(url);
+      const data = (await response.json()) as {
+        success: boolean;
+        folders?: Array<{
+          id: string;
+          name: string;
+          createdAt: string;
+          updatedAt: string;
+          parentId?: string;
+        }>;
+        error?: string;
+      };
+
+      if (response.ok && data.success) {
+        setFolders(data.folders ?? []);
+      } else {
+        console.error("Failed to fetch folders:", data.error);
+      }
+    } catch (error) {
+      console.error("Failed to fetch folders:", error);
+    } finally {
+      setIsLoadingFolders(false);
+    }
+  }, [currentFolderId]);
+
+  // Load folders when current folder changes
+  useEffect(() => {
+    void fetchFolders();
+  }, [fetchFolders]);
+
+  // Build breadcrumb path when current folder changes
+  const buildBreadcrumbPath = useCallback(async (folderId: string | null) => {
+    if (!folderId) {
+      setFolderPath([]);
+      return;
+    }
+
+    try {
+      const path: Array<{ id: string; name: string }> = [];
+      let currentId: string | null = folderId;
+
+      while (currentId) {
+        const response = await fetch(`/api/folders/${currentId}`);
+        const data = (await response.json()) as {
+          success: boolean;
+          folder?: {
+            id: string;
+            name: string;
+            parentId?: string;
+          };
+          error?: string;
+        };
+
+        if (response.ok && data.success && data.folder) {
+          path.unshift({ id: data.folder.id, name: data.folder.name });
+          currentId = data.folder.parentId ?? null;
+        } else {
+          break;
+        }
+      }
+
+      setFolderPath(path);
+    } catch (error) {
+      console.error("Failed to build breadcrumb path:", error);
+      setFolderPath([]);
+    }
+  }, []);
+
+  // Update breadcrumb path when current folder changes
+  useEffect(() => {
+    void buildBreadcrumbPath(currentFolderId);
+  }, [currentFolderId, buildBreadcrumbPath]);
 
   // Handle file upload completion
   const handleUploadComplete = useCallback(async () => {
@@ -104,13 +206,13 @@ export function MainContent() {
     async (files: FileList | File[]) => {
       const fileArray = Array.from(files);
       try {
-        await uploadFiles(fileArray);
+        await uploadFiles(fileArray, currentFolderId);
         await handleUploadComplete();
       } catch (error) {
         console.error("Upload failed:", error);
       }
     },
-    [uploadFiles, handleUploadComplete],
+    [uploadFiles, handleUploadComplete, currentFolderId],
   );
 
   // Drag and drop handlers
@@ -381,7 +483,62 @@ export function MainContent() {
   );
 
   const hasFiles = files.length > 0;
-  const shouldShowUploadZone = !hasFiles || isUploading;
+  const hasFolders = folders.length > 0;
+  const hasContent = hasFiles || hasFolders;
+  const shouldShowUploadZone = !hasContent || isUploading;
+
+  // Handle folder creation
+  const handleCreateFolder = useCallback(
+    async (folderName: string) => {
+      try {
+        const response = await fetch("/api/folders", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: folderName,
+            parentId: currentFolderId,
+          }),
+        });
+
+        const data = (await response.json()) as {
+          success: boolean;
+          folder?: {
+            id: string;
+            name: string;
+            createdAt: string;
+            updatedAt: string;
+            parentId?: string;
+          };
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(data.error ?? "Failed to create folder");
+        }
+
+        if (data.success && data.folder) {
+          // Add the new folder to the current list
+          setFolders((prev) => [...prev, data.folder!]);
+          console.log("Folder created successfully:", data.folder.name);
+        }
+      } catch (error) {
+        console.error("Create folder error:", error);
+        throw error;
+      }
+    },
+    [currentFolderId],
+  );
+
+  // Navigate to a specific folder
+  const navigateToFolder = useCallback(
+    (folderId: string | null) => {
+      setCurrentFolderId(folderId);
+      clearSelection(); // Clear selection when navigating
+    },
+    [clearSelection],
+  );
 
   if (isLoading) {
     return (
@@ -401,17 +558,24 @@ export function MainContent() {
       <div className="space-y-6 p-4 lg:p-6">
         {/* Breadcrumb Navigation */}
         <nav className="flex items-center space-x-1 text-sm text-gray-600">
-          {breadcrumbs.map((crumb, index) => (
-            <div key={crumb.name} className="flex items-center">
-              {index > 0 && <ChevronRight className="mx-1 h-4 w-4" />}
+          <button
+            className="hover:text-gray-900 hover:underline"
+            onClick={() => navigateToFolder(null)}
+          >
+            My Drive
+          </button>
+          {folderPath.map((folder, index) => (
+            <div key={folder.id} className="flex items-center">
+              <ChevronRight className="mx-1 h-4 w-4" />
               <button
                 className={`hover:text-gray-900 ${
-                  index === breadcrumbs.length - 1
+                  index === folderPath.length - 1
                     ? "font-medium text-gray-900"
                     : "hover:underline"
                 }`}
+                onClick={() => navigateToFolder(folder.id)}
               >
-                {crumb.name}
+                {folder.name}
               </button>
             </div>
           ))}
@@ -576,7 +740,7 @@ export function MainContent() {
         )}
 
         {/* Files Display */}
-        {hasFiles && (
+        {hasContent && (
           <BulkContextMenu
             onUpload={() => setShowUploadModal(true)}
             onNewFolder={() => setCreateFolderDialog(true)}
@@ -599,7 +763,7 @@ export function MainContent() {
                 onBulkDelete={handleBulkDelete}
               />
 
-              {/* File Actions */}
+              {/* Content Display */}
               {(() => {
                 const fileActions = {
                   onDownload: handleFileDownload,
@@ -613,28 +777,79 @@ export function MainContent() {
                   },
                 };
 
+                const folderActions = {
+                  onOpen: (folderId: string) => {
+                    console.log("Opening folder:", folderId);
+                    navigateToFolder(folderId);
+                  },
+                  onRename: (folderId: string, newName: string) => {
+                    console.log("Rename folder:", folderId, "to:", newName);
+                    // TODO: Implement folder rename
+                  },
+                  onDelete: (folderId: string) => {
+                    console.log("Delete folder:", folderId);
+                    // TODO: Implement folder delete
+                  },
+                  onMove: (folderId: string, newParentId: string) => {
+                    console.log("Move folder:", folderId, "to:", newParentId);
+                    // TODO: Implement folder move
+                  },
+                };
+
                 return viewMode === "grid" ? (
-                  <FileGrid
-                    files={files}
-                    selection={selection}
-                    onSelect={handleSelect}
-                    actions={fileActions}
-                    isLoading={isLoading}
-                    onUpload={() => setShowUploadModal(true)}
-                  />
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                    {/* Folders */}
+                    {folders.map((folder) => (
+                      <FolderCard
+                        key={folder.id}
+                        folder={folder}
+                        isSelected={false} // TODO: Add folder selection
+                        onSelect={() => {
+                          // TODO: Implement folder selection
+                        }}
+                        actions={folderActions}
+                        viewMode="grid"
+                      />
+                    ))}
+                    {/* Files */}
+                    {files.map((file) => (
+                      <FileCard
+                        key={file.id}
+                        file={file}
+                        isSelected={selection.selectedFiles.has(file.id)}
+                        onSelect={handleSelect}
+                        actions={fileActions}
+                        viewMode="grid"
+                      />
+                    ))}
+                  </div>
                 ) : (
-                  <FileList
-                    files={files}
-                    selection={selection}
-                    onSelect={handleSelect}
-                    onSelectAll={handleSelectAll}
-                    actions={fileActions}
-                    sortField={sortField}
-                    sortOrder={sortOrder}
-                    onSort={handleSort}
-                    isLoading={isLoading}
-                    onUpload={() => setShowUploadModal(true)}
-                  />
+                  <div className="space-y-2">
+                    {/* Folders */}
+                    {folders.map((folder) => (
+                      <FolderCard
+                        key={folder.id}
+                        folder={folder}
+                        isSelected={false} // TODO: Add folder selection
+                        onSelect={() => {
+                          // TODO: Implement folder selection
+                        }}
+                        actions={folderActions}
+                        viewMode="list"
+                      />
+                    ))}
+                    {/* Files */}
+                    {files.map((file) => (
+                      <FileCard
+                        key={file.id}
+                        file={file}
+                        isSelected={selection.selectedFiles.has(file.id)}
+                        onSelect={handleSelect}
+                        actions={fileActions}
+                        viewMode="list"
+                      />
+                    ))}
+                  </div>
                 );
               })()}
             </div>
@@ -645,9 +860,7 @@ export function MainContent() {
         <CreateFolderDialog
           isOpen={createFolderDialog}
           onClose={() => setCreateFolderDialog(false)}
-          onCreateFolder={async (folderName) => {
-            // TODO: Implement API call and update folder list
-          }}
+          onCreateFolder={handleCreateFolder}
         />
       </div>
 
@@ -666,6 +879,7 @@ export function MainContent() {
         isOpen={showUploadModal}
         onClose={() => setShowUploadModal(false)}
         onUploadComplete={handleUploadComplete}
+        folderId={currentFolderId}
       />
 
       {/* Rename Dialog */}

@@ -39,20 +39,54 @@
 
 ### 5. File Organization (30 min)
 
-- [ ] Create folder creation interface
-- [ ] Implement folder navigation
-- [ ] Add breadcrumb navigation
-- [ ] Create folder tree in sidebar
-- [ ] Test folder creation and navigation
+- [x] Create folder creation interface
+- [x] Implement folder navigation
+- [x] Add breadcrumb navigation
+- [x] Create folder tree in sidebar
+- [x] Test folder creation and navigation
 
 ## Success Criteria
 
 - [x] Users can upload files via drag-and-drop or file picker
 - [x] Files display in grid/list view with proper metadata
 - [x] File operations (download, rename, delete) work
-- [ ] Users can create and navigate folders
+- [x] Users can create and navigate folders
 - [x] File upload shows progress and handles errors
 
 ## Next Phase
 
 Ready for search and sharing features
+
+## ✅ Step 2: Folder Navigation
+
+**Status:** ✅ **COMPLETED**
+
+**What we implemented:**
+
+- [x] Click folder to navigate into it
+- [x] Update current folder state
+- [x] Fetch and display files/folders for the selected folder
+- [x] Update breadcrumbs to show current path
+
+**Key Features:**
+
+- **Dynamic Breadcrumbs**: Shows the full path from root to current folder
+- **Clickable Navigation**: Click any breadcrumb to navigate to that folder
+- **Folder Filtering**: Files API now supports `folderId` parameter to filter files by folder
+- **State Management**: Proper state updates when navigating between folders
+- **Selection Clearing**: File selection is cleared when navigating to prevent confusion
+
+**API Changes:**
+
+- **Files API**: Added `folderId` query parameter support with proper null handling
+- **Folders API**: Added single folder retrieval endpoint for breadcrumb building
+
+**Testing Steps:**
+
+1. Create a folder in the root directory
+2. Click on the folder to navigate into it
+3. Verify breadcrumbs show "My Drive > [Folder Name]"
+4. Click "My Drive" in breadcrumbs to return to root
+5. Create a subfolder inside the first folder
+6. Navigate into the subfolder and verify breadcrumbs show full path
+7. Click any breadcrumb to navigate to that level
