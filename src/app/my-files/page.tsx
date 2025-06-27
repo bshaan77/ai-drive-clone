@@ -9,7 +9,7 @@
 
 import { useEffect, useState } from "react";
 import { File, ExternalLink, Database, Cloud } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Card, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 
 interface FileRecord {
@@ -46,7 +46,7 @@ export default function MyFilesPage() {
       } else {
         setError(data.error ?? "Failed to fetch files");
       }
-    } catch (err) {
+    } catch {
       setError("Failed to fetch files");
     } finally {
       setLoading(false);

@@ -19,6 +19,7 @@ import { UploadModal } from "~/components/upload-modal";
 import { FileGrid } from "~/components/file-display/FileGrid";
 import { FileList } from "~/components/file-display/FileList";
 import { BulkActionsToolbar } from "~/components/file-display/BulkActionsToolbar";
+import { RenameDialog } from "~/components/file-display/RenameDialog";
 import type { FileRecord } from "~/types/file";
 
 const breadcrumbs = [{ name: "My Drive", href: "/" }];
@@ -34,6 +35,10 @@ export function MainContent() {
     "name" | "size" | "createdAt" | "category"
   >("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [renameDialog, setRenameDialog] = useState<{
+    isOpen: boolean;
+    file: FileRecord | null;
+  }>({ isOpen: false, file: null });
 
   const { uploadFiles, isUploading, uploadProgress, uploadError, clearError } =
     useFileUpload();
@@ -58,8 +63,9 @@ export function MainContent() {
       } else {
         setError(data.error ?? "Failed to fetch files");
       }
-    } catch (err) {
+    } catch (_err) {
       setError("Failed to fetch files");
+      console.error("Failed to fetch files", _err);
     } finally {
       setIsLoading(false);
     }
@@ -71,13 +77,10 @@ export function MainContent() {
   }, [fetchFiles]);
 
   // Handle file upload completion
-  const handleUploadComplete = useCallback(
-    async (uploadedFiles: File[]) => {
-      // Refresh the file list after upload
-      await fetchFiles();
-    },
-    [fetchFiles],
-  );
+  const handleUploadComplete = useCallback(async () => {
+    // Refresh the file list after upload
+    await fetchFiles();
+  }, [fetchFiles]);
 
   // Handle file selection
   const handleFileSelect = useCallback(
@@ -85,7 +88,7 @@ export function MainContent() {
       const fileArray = Array.from(files);
       try {
         await uploadFiles(fileArray);
-        await handleUploadComplete(fileArray);
+        await handleUploadComplete();
       } catch (error) {
         console.error("Upload failed:", error);
       }
@@ -138,9 +141,13 @@ export function MainContent() {
   // File actions handlers
   const handleFileDownload = useCallback(
     (fileId: string) => {
+      console.log("Download called for file:", fileId);
       const file = files.find((f) => f.id === fileId);
       if (file) {
+        console.log("Opening download URL:", file.blobUrl);
         window.open(file.blobUrl, "_blank");
+      } else {
+        console.error("File not found:", fileId);
       }
     },
     [files],
@@ -151,26 +158,101 @@ export function MainContent() {
     // TODO: Implement file sharing
   }, []);
 
-  const handleFileRename = useCallback((fileId: string, newName: string) => {
-    console.log("Rename file:", fileId, "to:", newName);
-    // TODO: Implement file renaming
-  }, []);
+  const handleFileRename = useCallback(
+    async (fileId: string, newName: string) => {
+      console.log("Rename called for file:", fileId, "to:", newName);
+      try {
+        const response = await fetch(`/api/files/${fileId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name: newName }),
+        });
+
+        console.log("Rename response status:", response.status);
+
+        if (!response.ok) {
+          const error = (await response.json()) as { error?: string };
+          throw new Error(error.error ?? "Failed to rename file");
+        }
+
+        console.log("Rename successful, refreshing files");
+        // Refresh the file list
+        await fetchFiles();
+      } catch (error) {
+        console.error("Rename error:", error);
+        throw error;
+      }
+    },
+    [fetchFiles],
+  );
 
   const handleFileMove = useCallback((fileId: string, folderId: string) => {
     console.log("Move file:", fileId, "to folder:", folderId);
     // TODO: Implement file moving
   }, []);
 
-  const handleFileDelete = useCallback((fileId: string) => {
-    console.log("Delete file:", fileId);
-    // TODO: Implement file deletion
-  }, []);
+  const handleFileDelete = useCallback(
+    async (fileId: string) => {
+      console.log("Delete called for file:", fileId);
+      try {
+        const response = await fetch(`/api/files/${fileId}`, {
+          method: "DELETE",
+        });
+
+        console.log("Delete response status:", response.status);
+
+        if (!response.ok) {
+          const error = (await response.json()) as { error?: string };
+          throw new Error(error.error ?? "Failed to delete file");
+        }
+
+        console.log("Delete successful, refreshing files");
+        // Refresh the file list
+        await fetchFiles();
+      } catch (error) {
+        console.error("Delete error:", error);
+        setError(
+          error instanceof Error ? error.message : "Failed to delete file",
+        );
+      }
+    },
+    [fetchFiles],
+  );
 
   // Bulk actions handlers
-  const handleBulkDownload = useCallback(() => {
-    console.log("Bulk download:", Array.from(selection.selectedFiles));
-    // TODO: Implement bulk download
-  }, [selection.selectedFiles]);
+  const handleBulkDownload = useCallback(async () => {
+    const selectedFileIds = Array.from(selection.selectedFiles);
+    if (selectedFileIds.length === 0) return;
+
+    try {
+      const response = await fetch(
+        `/api/files/bulk?ids=${selectedFileIds.join(",")}`,
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to get files for download");
+      }
+
+      const data = (await response.json()) as {
+        files: Array<{ blobUrl: string; originalName: string }>;
+      };
+
+      // Download each file individually
+      data.files.forEach((file) => {
+        const link = document.createElement("a");
+        link.href = file.blobUrl;
+        link.download = file.originalName;
+        link.click();
+      });
+
+      clearSelection();
+    } catch (error) {
+      console.error("Bulk download error:", error);
+      setError("Failed to download files");
+    }
+  }, [selection.selectedFiles, clearSelection]);
 
   const handleBulkShare = useCallback(() => {
     console.log("Bulk share:", Array.from(selection.selectedFiles));
@@ -182,15 +264,34 @@ export function MainContent() {
     // TODO: Implement bulk move
   }, [selection.selectedFiles]);
 
-  const handleBulkDelete = useCallback(() => {
-    console.log("Bulk delete:", Array.from(selection.selectedFiles));
-    // TODO: Implement bulk delete
-  }, [selection.selectedFiles]);
+  const handleBulkDelete = useCallback(async () => {
+    const selectedFileIds = Array.from(selection.selectedFiles);
+    if (selectedFileIds.length === 0) return;
 
-  const handleBulkStar = useCallback(() => {
-    console.log("Bulk star:", Array.from(selection.selectedFiles));
-    // TODO: Implement bulk star
-  }, [selection.selectedFiles]);
+    try {
+      const response = await fetch("/api/files/bulk", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ fileIds: selectedFileIds }),
+      });
+
+      if (!response.ok) {
+        const error = (await response.json()) as { error?: string };
+        throw new Error(error.error ?? "Failed to delete files");
+      }
+
+      // Refresh the file list
+      await fetchFiles();
+      clearSelection();
+    } catch (error) {
+      console.error("Bulk delete error:", error);
+      setError(
+        error instanceof Error ? error.message : "Failed to delete files",
+      );
+    }
+  }, [selection.selectedFiles, fetchFiles, clearSelection]);
 
   // Sort handler
   const handleSort = useCallback(
@@ -390,7 +491,6 @@ export function MainContent() {
               onBulkShare={handleBulkShare}
               onBulkMove={handleBulkMove}
               onBulkDelete={handleBulkDelete}
-              onBulkStar={handleBulkStar}
             />
 
             {/* File Actions */}
@@ -401,6 +501,9 @@ export function MainContent() {
                 onRename: handleFileRename,
                 onMove: handleFileMove,
                 onDelete: handleFileDelete,
+                onOpenRenameDialog: (file: FileRecord) => {
+                  setRenameDialog({ isOpen: true, file });
+                },
               };
 
               return viewMode === "grid" ? (
@@ -446,6 +549,14 @@ export function MainContent() {
         isOpen={showUploadModal}
         onClose={() => setShowUploadModal(false)}
         onUploadComplete={handleUploadComplete}
+      />
+
+      {/* Rename Dialog */}
+      <RenameDialog
+        isOpen={renameDialog.isOpen}
+        onClose={() => setRenameDialog({ isOpen: false, file: null })}
+        file={renameDialog.file}
+        onRename={handleFileRename}
       />
     </main>
   );

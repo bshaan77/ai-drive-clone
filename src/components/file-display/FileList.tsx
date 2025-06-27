@@ -5,44 +5,15 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { ChevronUp, ChevronDown, Upload, FolderOpen } from "lucide-react";
+import type { FileActions, FileRecord } from "~/types/file";
 
 interface FileSelection {
   selectedFiles: Set<string>;
   isAllSelected: boolean;
 }
 
-interface FileRecord {
-  id: string;
-  name: string;
-  originalName: string;
-  mimeType: string;
-  size: number;
-  sizeFormatted: string;
-  blobUrl: string;
-  category: string;
-  icon: string;
-  folderId: string | null;
-  isPublic: boolean;
-  createdAt: string;
-  updatedAt: string;
-  metadata: Record<string, unknown>;
-  isImage: boolean;
-  isVideo: boolean;
-  isAudio: boolean;
-  isDocument: boolean;
-  isArchive: boolean;
-}
-
 type SortField = "name" | "size" | "createdAt" | "category";
 type SortOrder = "asc" | "desc";
-
-interface FileActions {
-  onDownload: (fileId: string) => void;
-  onShare: (fileId: string) => void;
-  onRename: (fileId: string, newName: string) => void;
-  onMove: (fileId: string, folderId: string) => void;
-  onDelete: (fileId: string) => void;
-}
 
 interface FileListProps {
   files: FileRecord[];

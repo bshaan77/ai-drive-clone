@@ -5,7 +5,7 @@
  * with enhanced metadata and filtering capabilities.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
 import { files, users } from "~/server/db/schema";
@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
 /**
  * Get file statistics for the user
  */
-export async function HEAD(request: NextRequest) {
+export async function HEAD() {
   try {
     const { userId } = await auth();
     if (!userId) {

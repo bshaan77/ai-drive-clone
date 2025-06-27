@@ -27,8 +27,8 @@ import {
   FolderOpen,
   Trash2,
   Copy,
-  Star,
 } from "lucide-react";
+import type { FileRecord } from "~/types/file";
 
 interface FileActions {
   onDownload: (fileId: string) => void;
@@ -36,13 +36,11 @@ interface FileActions {
   onRename: (fileId: string, newName: string) => void;
   onMove: (fileId: string, folderId: string) => void;
   onDelete: (fileId: string) => void;
+  onOpenRenameDialog?: (file: FileRecord) => void;
 }
 
 interface FileActionsMenuProps {
-  file: {
-    id: string;
-    name: string;
-  };
+  file: FileRecord;
   actions: FileActions;
   className?: string;
 }
@@ -85,13 +83,12 @@ export function FileActionsMenu({
             <Copy className="mr-2 h-4 w-4" />
             Copy link
           </DropdownMenuItem>
-          <DropdownMenuItem>
-            <Star className="mr-2 h-4 w-4" />
-            Add to starred
-          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            onClick={() => actions.onRename(file.id, file.name)}
+            onClick={() =>
+              actions.onOpenRenameDialog?.(file) ??
+              actions.onRename(file.id, file.name)
+            }
           >
             <Edit className="mr-2 h-4 w-4" />
             Rename

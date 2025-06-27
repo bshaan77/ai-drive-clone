@@ -1,7 +1,7 @@
 "use client";
 
 import { FileCard } from "./FileCard";
-import type { FileActions } from "~/types/file";
+import type { FileActions, FileRecord } from "~/types/file";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Card, CardContent } from "~/components/ui/card";
 import { Upload, FolderOpen } from "lucide-react";
@@ -10,28 +10,6 @@ import { Button } from "~/components/ui/button";
 interface FileSelection {
   selectedFiles: Set<string>;
   isAllSelected: boolean;
-}
-
-interface FileRecord {
-  id: string;
-  name: string;
-  originalName: string;
-  mimeType: string;
-  size: number;
-  sizeFormatted: string;
-  blobUrl: string;
-  category: string;
-  icon: string;
-  folderId: string | null;
-  isPublic: boolean;
-  createdAt: string;
-  updatedAt: string;
-  metadata: Record<string, unknown>;
-  isImage: boolean;
-  isVideo: boolean;
-  isAudio: boolean;
-  isDocument: boolean;
-  isArchive: boolean;
 }
 
 interface FileGridProps {

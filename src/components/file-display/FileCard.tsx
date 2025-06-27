@@ -10,35 +10,13 @@ import {
   formatDate,
   truncateFileName,
 } from "~/lib/file-utils";
-import type { FileActions } from "~/types/file";
+import type { FileActions, FileRecord } from "~/types/file";
 import { Badge } from "~/components/ui/badge";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-
-interface FileRecord {
-  id: string;
-  name: string;
-  originalName: string;
-  mimeType: string;
-  size: number;
-  sizeFormatted: string;
-  blobUrl: string;
-  category: string;
-  icon: string;
-  folderId: string | null;
-  isPublic: boolean;
-  createdAt: string;
-  updatedAt: string;
-  metadata: Record<string, unknown>;
-  isImage: boolean;
-  isVideo: boolean;
-  isAudio: boolean;
-  isDocument: boolean;
-  isArchive: boolean;
-}
 
 interface FileCardProps {
   file: FileRecord;
