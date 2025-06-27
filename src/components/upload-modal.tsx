@@ -18,12 +18,14 @@ interface UploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUploadComplete?: (files: File[]) => void;
+  folderId?: string | null;
 }
 
 export function UploadModal({
   isOpen,
   onClose,
   onUploadComplete,
+  folderId,
 }: UploadModalProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -79,14 +81,14 @@ export function UploadModal({
     if (selectedFiles.length === 0) return;
 
     try {
-      await uploadFiles(selectedFiles);
+      await uploadFiles(selectedFiles, folderId);
       onUploadComplete?.(selectedFiles);
       setSelectedFiles([]);
       onClose();
     } catch (error) {
       console.error("Upload failed:", error);
     }
-  }, [selectedFiles, uploadFiles, onUploadComplete, onClose]);
+  }, [selectedFiles, uploadFiles, onUploadComplete, onClose, folderId]);
 
   // Remove file from selection
   const removeFile = useCallback((index: number) => {

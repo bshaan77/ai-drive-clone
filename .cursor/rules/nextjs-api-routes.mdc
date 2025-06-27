@@ -1,0 +1,161 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Next.js 15 API Route Parameters
+
+## Issue Description
+
+In Next.js 15, dynamic API route parameters have changed from synchronous to asynchronous. This affects all API routes that use dynamic segments like `[id]`, `[slug]`, etc.
+
+### Error Pattern
+
+When you see this build error:
+```
+Type error: Route "src/app/api/[route]/[id]/route.ts" has an invalid "GET" export:
+Type "{ params: { id: string; }; }" is not a valid type for the function's second argument.
+```
+
+### Root Cause
+
+Next.js 15 changed the parameter type from:
+- **Before**: `{ params: { id: string } }`
+- **After**: `{ params: Promise<{ id: string }> }`
+
+## Solution
+
+### 1. Update Parameter Type
+
+Change the function signature from:
+```typescript
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const folderId = params.id;
+  // ...
+}
+```
+
+To:
+```typescript
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: folderId } = await params;
+  // ...
+}
+```
+
+### 2. Await the Parameters
+
+Always await the params object and destructure the values:
+```typescript
+const { id: folderId } = await params;
+```
+
+## When to Use This Rule
+
+### ✅ Apply This Rule When:
+
+1. **Creating new dynamic API routes** with segments like `[id]`, `[slug]`, `[category]`
+2. **Fixing build errors** related to parameter types
+3. **Migrating from Next.js 14** to Next.js 15
+4. **Seeing TypeScript errors** about invalid parameter types
+
+### ✅ Examples of Routes That Need This:
+
+- `src/app/api/files/[id]/route.ts`
+- `src/app/api/folders/[id]/route.ts`
+- `src/app/api/users/[userId]/route.ts`
+- `src/app/api/posts/[slug]/route.ts`
+
+### ❌ Don't Apply When:
+
+- Static routes without dynamic segments
+- Pages (not API routes)
+- Middleware files
+
+## Complete Example
+
+```typescript
+/**
+ * Example API Route with Dynamic Parameters
+ */
+
+import { type NextRequest, NextResponse } from "next/server";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    // ✅ Correct: Await and destructure params
+    const { id } = await params;
+    
+    // Use the id parameter
+    const data = await fetchDataById(id);
+    
+    return NextResponse.json({ success: true, data });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to fetch data" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const body = await request.json();
+  
+  // Update logic here
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  
+  // Delete logic here
+}
+```
+
+## Multiple Parameters
+
+For routes with multiple dynamic segments like `[category]/[id]`:
+
+```typescript
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ category: string; id: string }> }
+) {
+  const { category, id } = await params;
+  // Use both parameters
+}
+```
+
+## Testing
+
+After applying this fix:
+1. Run `pnpm build` to verify the build succeeds
+2. Test the API endpoints to ensure they work correctly
+3. Check that parameter values are being received properly
+
+## Related Issues
+
+This change is part of Next.js 15's move toward more consistent async patterns. Similar changes may affect:
+- Server Components
+- Layout files
+- Page components with dynamic segments
+
+## References
+
+- [Next.js 15 Migration Guide](mdc:https:/nextjs.org/docs/upgrading)
+- [App Router API Routes](mdc:https:/nextjs.org/docs/app/building-your-application/routing/route-handlers)

@@ -9,7 +9,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
 import { files, users } from "~/server/db/schema";
-import { eq, desc, asc, like, and, or } from "drizzle-orm";
+import { eq, desc, asc, like, and, or, isNull } from "drizzle-orm";
 import { getFileCategory, getFileIcon, formatFileSize } from "~/lib/file-utils";
 
 export async function GET(request: NextRequest) {
@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search");
     const category = searchParams.get("category");
+    const folderId = searchParams.get("folderId");
     const sortBy = searchParams.get("sortBy") ?? "createdAt";
     const sortOrder = searchParams.get("sortOrder") ?? "desc";
     const limit = parseInt(searchParams.get("limit") ?? "50");
@@ -41,6 +42,14 @@ export async function GET(request: NextRequest) {
     // Build where conditions
     const baseConditions = [eq(files.ownerId, userRecord.id)];
     const additionalConditions = [];
+
+    // Add folder filter
+    if (folderId) {
+      additionalConditions.push(eq(files.folderId, folderId));
+    } else {
+      // If no folder specified, show files in root (null folderId)
+      additionalConditions.push(isNull(files.folderId));
+    }
 
     // Add search filter
     if (search) {
@@ -141,6 +150,7 @@ export async function GET(request: NextRequest) {
       filters: {
         search: search ?? null,
         category: category ?? null,
+        folderId: folderId ?? null,
         sortBy,
         sortOrder,
       },

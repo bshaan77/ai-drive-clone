@@ -16,10 +16,9 @@ import { Progress } from "~/components/ui/progress";
 import { useFileUpload } from "~/hooks/use-file-upload";
 import { useFileSelection } from "~/hooks/useFileSelection";
 import { UploadModal } from "~/components/upload-modal";
-import { FileGrid } from "~/components/file-display/FileGrid";
-import { FileList } from "~/components/file-display/FileList";
 import { BulkActionsToolbar } from "~/components/file-display/BulkActionsToolbar";
 import { RenameDialog } from "~/components/file-display/RenameDialog";
+import { BulkContextMenu } from "~/components/file-display/BulkContextMenu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,10 +30,25 @@ import {
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog";
 import type { FileRecord } from "~/types/file";
+import { CreateFolderDialog } from "~/components/file-display/CreateFolderDialog";
+import { FolderCard } from "~/components/file-display/FolderCard";
+import { FileCard } from "~/components/file-display/FileCard";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 
-const breadcrumbs = [{ name: "My Drive", href: "/" }];
+interface MainContentProps {
+  currentFolderId: string | null;
+  onFolderSelect: (folderId: string | null) => void;
+}
 
-export function MainContent() {
+export function MainContent({
+  currentFolderId,
+  onFolderSelect,
+}: MainContentProps) {
   const [files, setFiles] = useState<FileRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,19 +67,40 @@ export function MainContent() {
     isOpen: boolean;
     fileIds: string[];
   }>({ isOpen: false, fileIds: [] });
+  const [createFolderDialog, setCreateFolderDialog] = useState(false);
+  const [folders, setFolders] = useState<
+    Array<{
+      id: string;
+      name: string;
+      createdAt: string;
+      updatedAt: string;
+      parentId?: string;
+    }>
+  >([]);
+  const [folderPath, setFolderPath] = useState<
+    Array<{
+      id: string;
+      name: string;
+    }>
+  >([]);
 
   const { uploadFiles, isUploading, uploadProgress, uploadError, clearError } =
     useFileUpload();
 
   // File selection hook
-  const { selection, handleSelect, handleSelectAll, clearSelection } =
-    useFileSelection(useMemo(() => files.map((f) => f.id), [files]));
+  const { selection, handleSelect, clearSelection } = useFileSelection(
+    useMemo(() => files.map((f) => f.id), [files]),
+  );
 
   // Fetch files from database
   const fetchFiles = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/files");
+      const url = currentFolderId
+        ? `/api/files?folderId=${currentFolderId}&sortBy=${sortField}&sortOrder=${sortOrder}`
+        : `/api/files?sortBy=${sortField}&sortOrder=${sortOrder}`;
+
+      const response = await fetch(url);
       const data = (await response.json()) as {
         success: boolean;
         files?: FileRecord[];
@@ -83,12 +118,90 @@ export function MainContent() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentFolderId, sortField, sortOrder]);
 
   // Load files on component mount
   useEffect(() => {
     void fetchFiles();
   }, [fetchFiles]);
+
+  // Fetch folders for current location
+  const fetchFolders = useCallback(async () => {
+    try {
+      const url = currentFolderId
+        ? `/api/folders?parentId=${currentFolderId}`
+        : "/api/folders";
+
+      const response = await fetch(url);
+      const data = (await response.json()) as {
+        success: boolean;
+        folders?: Array<{
+          id: string;
+          name: string;
+          createdAt: string;
+          updatedAt: string;
+          parentId?: string;
+        }>;
+        error?: string;
+      };
+
+      if (response.ok && data.success) {
+        setFolders(data.folders ?? []);
+      } else {
+        console.error("Failed to fetch folders:", data.error);
+      }
+    } catch (error) {
+      console.error("Failed to fetch folders:", error);
+    }
+  }, [currentFolderId]);
+
+  // Load folders when current folder changes
+  useEffect(() => {
+    void fetchFolders();
+  }, [fetchFolders]);
+
+  // Build breadcrumb path when current folder changes
+  const buildBreadcrumbPath = useCallback(async (folderId: string | null) => {
+    if (!folderId) {
+      setFolderPath([]);
+      return;
+    }
+
+    try {
+      const path: Array<{ id: string; name: string }> = [];
+      let currentId: string | null = folderId;
+
+      while (currentId) {
+        const response = await fetch(`/api/folders/${currentId}`);
+        const data = (await response.json()) as {
+          success: boolean;
+          folder?: {
+            id: string;
+            name: string;
+            parentId?: string;
+          };
+          error?: string;
+        };
+
+        if (response.ok && data.success && data.folder) {
+          path.unshift({ id: data.folder.id, name: data.folder.name });
+          currentId = data.folder.parentId ?? null;
+        } else {
+          break;
+        }
+      }
+
+      setFolderPath(path);
+    } catch (error) {
+      console.error("Failed to build breadcrumb path:", error);
+      setFolderPath([]);
+    }
+  }, []);
+
+  // Update breadcrumb path when current folder changes
+  useEffect(() => {
+    void buildBreadcrumbPath(currentFolderId);
+  }, [currentFolderId, buildBreadcrumbPath]);
 
   // Handle file upload completion
   const handleUploadComplete = useCallback(async () => {
@@ -101,13 +214,13 @@ export function MainContent() {
     async (files: FileList | File[]) => {
       const fileArray = Array.from(files);
       try {
-        await uploadFiles(fileArray);
+        await uploadFiles(fileArray, currentFolderId);
         await handleUploadComplete();
       } catch (error) {
         console.error("Upload failed:", error);
       }
     },
-    [uploadFiles, handleUploadComplete],
+    [uploadFiles, handleUploadComplete, currentFolderId],
   );
 
   // Drag and drop handlers
@@ -146,11 +259,6 @@ export function MainContent() {
     },
     [handleFileSelect],
   );
-
-  // Format date
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
 
   // File actions handlers
   const handleFileDownload = useCallback(
@@ -377,8 +485,93 @@ export function MainContent() {
     [sortField, sortOrder],
   );
 
+  // Handle folder creation
+  const handleCreateFolder = useCallback(
+    async (folderName: string) => {
+      try {
+        const response = await fetch("/api/folders", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: folderName,
+            parentId: currentFolderId,
+          }),
+        });
+
+        const data = (await response.json()) as {
+          success: boolean;
+          folder?: {
+            id: string;
+            name: string;
+            createdAt: string;
+            updatedAt: string;
+            parentId?: string;
+          };
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(data.error ?? "Failed to create folder");
+        }
+
+        if (data.success && data.folder) {
+          // Add the new folder to the current list
+          setFolders((prev) => [...prev, data.folder!]);
+          console.log("Folder created successfully:", data.folder.name);
+        }
+      } catch (error) {
+        console.error("Create folder error:", error);
+        throw error;
+      }
+    },
+    [currentFolderId],
+  );
+
+  // Navigate to a specific folder
+  const navigateToFolder = useCallback(
+    (folderId: string | null) => {
+      onFolderSelect(folderId);
+      clearSelection(); // Clear selection when navigating
+    },
+    [onFolderSelect, clearSelection],
+  );
+
+  // Sort folders client-side
+  const sortedFolders = useMemo(() => {
+    return [...folders].sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortField) {
+        case "name":
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case "createdAt":
+          comparison =
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+        case "size":
+          // Folders don't have size, so sort by name as fallback
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case "category":
+          // Folders don't have category, so sort by name as fallback
+          comparison = a.name.localeCompare(b.name);
+          break;
+        default:
+          comparison =
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  }, [folders, sortField, sortOrder]);
+
   const hasFiles = files.length > 0;
-  const shouldShowUploadZone = !hasFiles || isUploading;
+  const hasFolders = folders.length > 0;
+  const hasContent = hasFiles || hasFolders;
+  const shouldShowUploadZone = !hasContent || isUploading;
 
   if (isLoading) {
     return (
@@ -398,17 +591,24 @@ export function MainContent() {
       <div className="space-y-6 p-4 lg:p-6">
         {/* Breadcrumb Navigation */}
         <nav className="flex items-center space-x-1 text-sm text-gray-600">
-          {breadcrumbs.map((crumb, index) => (
-            <div key={crumb.name} className="flex items-center">
-              {index > 0 && <ChevronRight className="mx-1 h-4 w-4" />}
+          <button
+            className="hover:text-gray-900 hover:underline"
+            onClick={() => navigateToFolder(null)}
+          >
+            My Drive
+          </button>
+          {folderPath.map((folder, index) => (
+            <div key={folder.id} className="flex items-center">
+              <ChevronRight className="mx-1 h-4 w-4" />
               <button
                 className={`hover:text-gray-900 ${
-                  index === breadcrumbs.length - 1
+                  index === folderPath.length - 1
                     ? "font-medium text-gray-900"
                     : "hover:underline"
                 }`}
+                onClick={() => navigateToFolder(folder.id)}
               >
-                {crumb.name}
+                {folder.name}
               </button>
             </div>
           ))}
@@ -418,12 +618,55 @@ export function MainContent() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-gray-900">My Drive</h1>
           <div className="flex items-center gap-2">
+            {hasContent && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Sort by:{" "}
+                    {sortField === "name"
+                      ? "Name"
+                      : sortField === "size"
+                        ? "Size"
+                        : sortField === "category"
+                          ? "Type"
+                          : "Date"}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handleSort("name")}>
+                    Name{" "}
+                    {sortField === "name" && (sortOrder === "asc" ? "↑" : "↓")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSort("size")}>
+                    Size{" "}
+                    {sortField === "size" && (sortOrder === "asc" ? "↑" : "↓")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSort("category")}>
+                    Type{" "}
+                    {sortField === "category" &&
+                      (sortOrder === "asc" ? "↑" : "↓")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSort("createdAt")}>
+                    Date{" "}
+                    {sortField === "createdAt" &&
+                      (sortOrder === "asc" ? "↑" : "↓")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             <Button
               className="bg-blue-600 hover:bg-blue-700"
               onClick={() => setShowUploadModal(true)}
             >
               <Plus className="mr-2 h-4 w-4" />
               Upload files
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setCreateFolderDialog(true)}
+            >
+              <Folder className="mr-2 h-4 w-4" />
+              New Folder
             </Button>
             {hasFiles && (
               <Button
@@ -474,144 +717,220 @@ export function MainContent() {
 
         {/* Upload Zone */}
         {shouldShowUploadZone && (
-          <div
-            className={`relative rounded-lg border-2 border-dashed transition-all duration-200 ${
-              isDragOver
-                ? "border-blue-400 bg-blue-50"
-                : "border-gray-300 hover:border-gray-400"
-            } ${isUploading ? "bg-gray-50" : "bg-white"}`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
+          <BulkContextMenu
+            onUpload={() => setShowUploadModal(true)}
+            onNewFolder={() => setCreateFolderDialog(true)}
           >
-            <div className="p-8 text-center lg:p-12">
-              {isUploading ? (
-                <div className="space-y-4">
-                  <div className="flex justify-center">
-                    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-lg font-medium text-gray-900">
-                      Uploading files...
-                    </p>
-                    {Object.entries(uploadProgress).map(
-                      ([fileName, progress]) => (
-                        <div key={fileName} className="space-y-1">
-                          <div className="flex justify-between text-sm text-gray-600">
-                            <span className="max-w-xs truncate">
-                              {fileName}
-                            </span>
-                            <span>{Math.round(progress)}%</span>
+            <div
+              className={`relative rounded-lg border-2 border-dashed transition-all duration-200 ${
+                isDragOver
+                  ? "border-blue-400 bg-blue-50"
+                  : "border-gray-300 hover:border-gray-400"
+              } ${isUploading ? "bg-gray-50" : "bg-white"}`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <div className="p-8 text-center lg:p-12">
+                {isUploading ? (
+                  <div className="space-y-4">
+                    <div className="flex justify-center">
+                      <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-lg font-medium text-gray-900">
+                        Uploading files...
+                      </p>
+                      {Object.entries(uploadProgress).map(
+                        ([fileName, progress]) => (
+                          <div key={fileName} className="space-y-1">
+                            <div className="flex justify-between text-sm text-gray-600">
+                              <span className="max-w-xs truncate">
+                                {fileName}
+                              </span>
+                              <span>{Math.round(progress)}%</span>
+                            </div>
+                            <Progress value={progress} className="h-2" />
                           </div>
-                          <Progress value={progress} className="h-2" />
-                        </div>
-                      ),
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex justify-center">
-                    <div className="rounded-full bg-blue-50 p-4">
-                      <Upload className="h-8 w-8 text-blue-600" />
+                        ),
+                      )}
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-medium text-gray-900">
-                      {isDragOver ? "Drop files here" : "Upload files to Drive"}
-                    </h3>
-                    <p className="text-gray-500">
-                      Drag and drop files here, or click to select files
-                    </p>
-                    <p className="text-sm text-gray-400">
-                      Maximum file size: 15MB
-                    </p>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex justify-center">
+                      <div className="rounded-full bg-blue-50 p-4">
+                        <Upload className="h-8 w-8 text-blue-600" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-medium text-gray-900">
+                        {isDragOver
+                          ? "Drop files here"
+                          : "Upload files to Drive"}
+                      </h3>
+                      <p className="text-gray-500">
+                        Drag and drop files here, or click to select files
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        Maximum file size: 15MB
+                      </p>
+                    </div>
+                    <div className="flex flex-col justify-center gap-3 sm:flex-row">
+                      <Button
+                        className="bg-blue-600 hover:bg-blue-700"
+                        onClick={() =>
+                          document.getElementById("file-input")?.click()
+                        }
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Select files
+                      </Button>
+                      <Button variant="outline">
+                        <Folder className="mr-2 h-4 w-4" />
+                        New folder
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex flex-col justify-center gap-3 sm:flex-row">
-                    <Button
-                      className="bg-blue-600 hover:bg-blue-700"
-                      onClick={() =>
-                        document.getElementById("file-input")?.click()
-                      }
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Select files
-                    </Button>
-                    <Button variant="outline">
-                      <Folder className="mr-2 h-4 w-4" />
-                      New folder
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            {/* Hidden file input */}
-            <input
-              id="file-input"
-              type="file"
-              multiple
-              className="hidden"
-              onChange={handleFileInputChange}
-              accept="*/*"
-            />
-          </div>
+              {/* Hidden file input */}
+              <input
+                id="file-input"
+                type="file"
+                multiple
+                className="hidden"
+                onChange={handleFileInputChange}
+                accept="*/*"
+              />
+            </div>
+          </BulkContextMenu>
         )}
 
         {/* Files Display */}
-        {hasFiles && (
-          <>
-            {/* Bulk Actions Toolbar */}
-            <BulkActionsToolbar
-              selection={selection}
-              onClearSelection={clearSelection}
-              onBulkDownload={handleBulkDownload}
-              onBulkShare={handleBulkShare}
-              onBulkMove={handleBulkMove}
-              onBulkRename={handleBulkRename}
-              onBulkDelete={handleBulkDelete}
-            />
+        {hasContent && (
+          <BulkContextMenu
+            onUpload={() => setShowUploadModal(true)}
+            onNewFolder={() => setCreateFolderDialog(true)}
+            onBulkDownload={handleBulkDownload}
+            onBulkShare={handleBulkShare}
+            onBulkRename={handleBulkRename}
+            onBulkMove={handleBulkMove}
+            onBulkDelete={handleBulkDelete}
+            hasSelection={selection.selectedFiles.size > 0}
+          >
+            <div>
+              {/* Bulk Actions Toolbar */}
+              <BulkActionsToolbar
+                selection={selection}
+                onClearSelection={clearSelection}
+                onBulkDownload={handleBulkDownload}
+                onBulkShare={handleBulkShare}
+                onBulkMove={handleBulkMove}
+                onBulkRename={handleBulkRename}
+                onBulkDelete={handleBulkDelete}
+              />
 
-            {/* File Actions */}
-            {(() => {
-              const fileActions = {
-                onDownload: handleFileDownload,
-                onShare: handleFileShare,
-                onRename: handleFileRename,
-                onMove: handleFileMove,
-                onDelete: handleFileDelete,
-                onOpenRenameDialog: (file: FileRecord) => {
-                  console.log("Setting rename dialog for file:", file.name);
-                  setRenameDialog({ isOpen: true, file });
-                },
-              };
+              {/* Content Display */}
+              {(() => {
+                const fileActions = {
+                  onDownload: handleFileDownload,
+                  onShare: handleFileShare,
+                  onRename: handleFileRename,
+                  onMove: handleFileMove,
+                  onDelete: handleFileDelete,
+                  onOpenRenameDialog: (file: FileRecord) => {
+                    console.log("Setting rename dialog for file:", file.name);
+                    setRenameDialog({ isOpen: true, file });
+                  },
+                };
 
-              return viewMode === "grid" ? (
-                <FileGrid
-                  files={files}
-                  selection={selection}
-                  onSelect={handleSelect}
-                  actions={fileActions}
-                  isLoading={isLoading}
-                  onUpload={() => setShowUploadModal(true)}
-                />
-              ) : (
-                <FileList
-                  files={files}
-                  selection={selection}
-                  onSelect={handleSelect}
-                  onSelectAll={handleSelectAll}
-                  actions={fileActions}
-                  sortField={sortField}
-                  sortOrder={sortOrder}
-                  onSort={handleSort}
-                  isLoading={isLoading}
-                  onUpload={() => setShowUploadModal(true)}
-                />
-              );
-            })()}
-          </>
+                const folderActions = {
+                  onOpen: (folderId: string) => {
+                    console.log("Opening folder:", folderId);
+                    navigateToFolder(folderId);
+                  },
+                  onRename: (folderId: string, newName: string) => {
+                    console.log("Rename folder:", folderId, "to:", newName);
+                    // TODO: Implement folder rename
+                  },
+                  onDelete: (folderId: string) => {
+                    console.log("Delete folder:", folderId);
+                    // TODO: Implement folder delete
+                  },
+                  onMove: (folderId: string, newParentId: string) => {
+                    console.log("Move folder:", folderId, "to:", newParentId);
+                    // TODO: Implement folder move
+                  },
+                };
+
+                return viewMode === "grid" ? (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                    {/* Folders */}
+                    {sortedFolders.map((folder) => (
+                      <FolderCard
+                        key={folder.id}
+                        folder={folder}
+                        isSelected={false} // TODO: Add folder selection
+                        onSelect={() => {
+                          // TODO: Implement folder selection
+                        }}
+                        actions={folderActions}
+                        viewMode="grid"
+                      />
+                    ))}
+                    {/* Files */}
+                    {files.map((file) => (
+                      <FileCard
+                        key={file.id}
+                        file={file}
+                        isSelected={selection.selectedFiles.has(file.id)}
+                        onSelect={handleSelect}
+                        actions={fileActions}
+                        viewMode="grid"
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {/* Folders */}
+                    {sortedFolders.map((folder) => (
+                      <FolderCard
+                        key={folder.id}
+                        folder={folder}
+                        isSelected={false} // TODO: Add folder selection
+                        onSelect={() => {
+                          // TODO: Implement folder selection
+                        }}
+                        actions={folderActions}
+                        viewMode="list"
+                      />
+                    ))}
+                    {/* Files */}
+                    {files.map((file) => (
+                      <FileCard
+                        key={file.id}
+                        file={file}
+                        isSelected={selection.selectedFiles.has(file.id)}
+                        onSelect={handleSelect}
+                        actions={fileActions}
+                        viewMode="list"
+                      />
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          </BulkContextMenu>
         )}
+
+        {/* Create Folder Dialog */}
+        <CreateFolderDialog
+          isOpen={createFolderDialog}
+          onClose={() => setCreateFolderDialog(false)}
+          onCreateFolder={handleCreateFolder}
+        />
       </div>
 
       {/* Floating Action Button (Mobile) */}
@@ -629,6 +948,7 @@ export function MainContent() {
         isOpen={showUploadModal}
         onClose={() => setShowUploadModal(false)}
         onUploadComplete={handleUploadComplete}
+        folderId={currentFolderId}
       />
 
       {/* Rename Dialog */}

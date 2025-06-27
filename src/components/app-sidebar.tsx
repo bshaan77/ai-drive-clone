@@ -1,7 +1,15 @@
-"use client"
+"use client";
 
-import { Clock, Home, Star, Trash2, Users, HardDrive, Plus } from "lucide-react"
-import Link from "next/link"
+import {
+  Clock,
+  Home,
+  Star,
+  Trash2,
+  Users,
+  HardDrive,
+  Plus,
+} from "lucide-react";
+import Link from "next/link";
 
 import {
   Sidebar,
@@ -14,9 +22,15 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
-} from "~/components/ui/sidebar"
-import { Button } from "~/components/ui/button"
-import { Progress } from "~/components/ui/progress"
+} from "~/components/ui/sidebar";
+import { Button } from "~/components/ui/button";
+import { Progress } from "~/components/ui/progress";
+import { FolderTree } from "~/components/folder-tree";
+
+interface AppSidebarProps {
+  currentFolderId: string | null;
+  onFolderSelect: (folderId: string | null) => void;
+}
 
 const navigationItems = [
   {
@@ -45,12 +59,15 @@ const navigationItems = [
     url: "/trash",
     icon: Trash2,
   },
-]
+];
 
-export function AppSidebar() {
-  const storageUsed = 8.2 // GB
-  const storageTotal = 15 // GB
-  const storagePercentage = (storageUsed / storageTotal) * 100
+export function AppSidebar({
+  currentFolderId,
+  onFolderSelect,
+}: AppSidebarProps) {
+  const storageUsed = 8.2; // GB
+  const storageTotal = 15; // GB
+  const storagePercentage = (storageUsed / storageTotal) * 100;
 
   return (
     <Sidebar className="border-r border-gray-200">
@@ -67,7 +84,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <div className="mb-4 px-2">
-              <Button className="w-full justify-start gap-3 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+              <Button className="w-full justify-start gap-3 bg-blue-600 text-white shadow-sm hover:bg-blue-700">
                 <Plus className="h-4 w-4" />
                 New
               </Button>
@@ -78,7 +95,7 @@ export function AppSidebar() {
                   <SidebarMenuButton
                     asChild
                     isActive={item.isActive}
-                    className="h-10 px-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 data-[active=true]:bg-blue-50 data-[active=true]:text-blue-700 data-[active=true]:font-medium"
+                    className="h-10 px-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 data-[active=true]:bg-blue-50 data-[active=true]:font-medium data-[active=true]:text-blue-700"
                   >
                     <Link href={item.url} className="flex items-center gap-3">
                       <item.icon className="h-4 w-4" />
@@ -90,6 +107,22 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Folder Tree */}
+        <SidebarSeparator className="my-4" />
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <div className="px-2 py-2">
+              <h3 className="mb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                Folders
+              </h3>
+              <FolderTree
+                currentFolderId={currentFolderId}
+                onFolderSelect={onFolderSelect}
+              />
+            </div>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="p-4">
@@ -97,7 +130,7 @@ export function AppSidebar() {
         <div className="space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600">Storage</span>
-            <span className="text-gray-900 font-medium">
+            <span className="font-medium text-gray-900">
               {storageUsed} GB of {storageTotal} GB used
             </span>
           </div>
@@ -105,12 +138,12 @@ export function AppSidebar() {
           <Button
             variant="outline"
             size="sm"
-            className="w-full text-blue-600 border-blue-200 hover:bg-blue-50 bg-transparent"
+            className="w-full border-blue-200 bg-transparent text-blue-600 hover:bg-blue-50"
           >
             Get more storage
           </Button>
         </div>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }
