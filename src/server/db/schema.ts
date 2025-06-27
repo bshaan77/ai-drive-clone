@@ -100,23 +100,26 @@ export const files = createTable(
 
 /**
  * Shares table - stores file/folder sharing information
+ *
+ * Note: fileId and folderId are mutually exclusive - only one should be set
+ * This represents sharing either a file OR a folder, not both
  */
 export const shares = createTable(
   "share",
   (d) => ({
     id: d.uuid().primaryKey().defaultRandom(),
-    fileId: d.uuid(), // Reference to files table
-    folderId: d.uuid(), // Reference to folders table
+    fileId: d.uuid(), // Reference to files table (mutually exclusive with folderId)
+    folderId: d.uuid(), // Reference to folders table (mutually exclusive with fileId)
     ownerId: d
       .uuid()
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id), // User who owns the file/folder
     sharedWithId: d
       .uuid()
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id), // User who receives the share
     permission: d.varchar({ length: 20 }).notNull().default("view"), // 'view' or 'edit'
-    expiresAt: d.timestamp({ withTimezone: true }),
+    expiresAt: d.timestamp({ withTimezone: true }), // Optional expiration
     createdAt: d
       .timestamp({ withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
@@ -127,26 +130,31 @@ export const shares = createTable(
     index("share_folder_id_idx").on(t.folderId),
     index("share_owner_id_idx").on(t.ownerId),
     index("share_shared_with_id_idx").on(t.sharedWithId),
+    // Ensure either fileId or folderId is set, but not both
+    index("share_resource_idx").on(t.fileId, t.folderId),
   ],
 );
 
 /**
  * Public links table - stores public sharing links
+ *
+ * Note: fileId and folderId are mutually exclusive - only one should be set
+ * This represents sharing either a file OR a folder publicly, not both
  */
 export const publicLinks = createTable(
   "public_link",
   (d) => ({
     id: d.uuid().primaryKey().defaultRandom(),
     token: d.varchar({ length: 100 }).notNull().unique(), // Unique token for the link
-    fileId: d.uuid(), // Reference to files table
-    folderId: d.uuid(), // Reference to folders table
+    fileId: d.uuid(), // Reference to files table (mutually exclusive with folderId)
+    folderId: d.uuid(), // Reference to folders table (mutually exclusive with fileId)
     ownerId: d
       .uuid()
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id), // User who owns the file/folder
     permission: d.varchar({ length: 20 }).notNull().default("view"), // 'view' or 'edit'
-    expiresAt: d.timestamp({ withTimezone: true }),
-    downloadCount: d.integer().default(0),
+    expiresAt: d.timestamp({ withTimezone: true }), // Optional expiration
+    downloadCount: d.integer().default(0), // Track usage
     createdAt: d
       .timestamp({ withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
@@ -157,6 +165,8 @@ export const publicLinks = createTable(
     index("public_link_file_id_idx").on(t.fileId),
     index("public_link_folder_id_idx").on(t.folderId),
     index("public_link_owner_id_idx").on(t.ownerId),
+    // Ensure either fileId or folderId is set, but not both
+    index("public_link_resource_idx").on(t.fileId, t.folderId),
   ],
 );
 
