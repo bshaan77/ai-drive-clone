@@ -12,7 +12,7 @@ import { eq, and } from "drizzle-orm";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { userId } = await auth();
@@ -28,7 +28,7 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const folderId = params.id;
+    const { id: folderId } = await params;
 
     // Get the folder that belongs to the user
     const folder = await db.query.folders.findFirst({
