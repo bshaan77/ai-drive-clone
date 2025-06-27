@@ -7,7 +7,6 @@
 
 "use client";
 
-import { useState } from "react";
 import { Card, CardContent } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Folder } from "lucide-react";
@@ -17,6 +16,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
+import { formatDate } from "~/lib/file-utils";
 
 interface FolderRecord {
   id: string;
@@ -93,7 +93,7 @@ export function FolderCard({
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500">
-                {new Date(folder.createdAt).toLocaleDateString()}
+                {formatDate(folder.createdAt)}
               </span>
             </div>
           </div>
@@ -137,7 +137,7 @@ export function FolderCard({
             </Badge>
           </div>
           <span className="text-sm text-gray-500">
-            {new Date(folder.createdAt).toLocaleDateString()}
+            {formatDate(folder.createdAt)}
           </span>
         </div>
       </CardContent>
