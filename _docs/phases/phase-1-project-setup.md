@@ -31,27 +31,27 @@
 
 ### 4. Basic Layout (45 min)
 
-- [ ] Use V0 to scaffold main layout (header, sidebar, content area)
-- [ ] Create responsive sidebar with navigation items
-- [ ] Add header with search placeholder and user menu
-- [ ] Create basic dashboard page
-- [ ] Test responsive layout on mobile/desktop
+- [x] Use V0 to scaffold main layout (header, sidebar, content area)
+- [x] Create responsive sidebar with navigation items
+- [x] Add header with search placeholder and user menu
+- [x] Create basic dashboard page
+- [x] Test responsive layout on mobile/desktop
 
 ### 5. File Storage Setup (30 min)
 
-- [ ] Configure Vercel Blob Storage
-- [ ] Create basic file upload API endpoint
-- [ ] Test file upload functionality
-- [ ] Add file type detection
-- [ ] Create basic file storage utilities
+- [x] Configure Vercel Blob Storage
+- [x] Create basic file upload API endpoint
+- [x] Test file upload functionality
+- [x] Add file type detection
+- [x] Create basic file storage utilities
 
 ## Success Criteria
 
-- [ ] App runs without errors
-- [ ] Users can sign up and sign in
-- [ ] Basic layout displays correctly
-- [ ] Database connection works
-- [ ] File upload endpoint accepts files
+- [x] App runs without errors
+- [x] Users can sign up and sign in
+- [x] Basic layout displays correctly
+- [x] Database connection works
+- [x] File upload endpoint accepts files
 
 ## Next Phase
 
