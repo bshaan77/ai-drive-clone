@@ -92,7 +92,7 @@ export function FileCard({
 
   return (
     <Card
-      className={`group cursor-pointer transition-all hover:shadow-md ${
+      className={`group relative cursor-pointer transition-all hover:shadow-md ${
         isSelected ? "bg-blue-50 ring-2 ring-blue-500" : ""
       }`}
       onMouseEnter={() => setIsHovered(true)}
@@ -128,11 +128,10 @@ export function FileCard({
             {formatDate(file.createdAt)}
           </span>
         </div>
-        {isHovered && (
-          <div className="absolute top-2 right-2">
-            <FileActionsMenu file={file} actions={actions} />
-          </div>
-        )}
+        {/* Actions menu - always visible */}
+        <div className="absolute top-2 right-2">
+          <FileActionsMenu file={file} actions={actions} />
+        </div>
       </CardContent>
     </Card>
   );

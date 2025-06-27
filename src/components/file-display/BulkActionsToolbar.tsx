@@ -2,7 +2,7 @@
 
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
-import { Download, Share, Trash2, FolderOpen, X } from "lucide-react";
+import { Download, Share, Trash2, FolderOpen, X, Edit } from "lucide-react";
 
 interface FileSelection {
   selectedFiles: Set<string>;
@@ -16,6 +16,7 @@ interface BulkActionsToolbarProps {
   onBulkShare: () => void;
   onBulkMove: () => void;
   onBulkDelete: () => void;
+  onBulkRename?: () => void;
 }
 
 export function BulkActionsToolbar({
@@ -25,6 +26,7 @@ export function BulkActionsToolbar({
   onBulkShare,
   onBulkMove,
   onBulkDelete,
+  onBulkRename,
 }: BulkActionsToolbarProps) {
   const selectedCount = selection.selectedFiles.size;
 
@@ -58,6 +60,18 @@ export function BulkActionsToolbar({
           <Share className="mr-1 h-4 w-4" />
           Share
         </Button>
+
+        {onBulkRename && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBulkRename}
+            className="text-blue-700 hover:bg-blue-100 hover:text-blue-900"
+          >
+            <Edit className="mr-1 h-4 w-4" />
+            Rename
+          </Button>
+        )}
 
         <Button
           variant="ghost"

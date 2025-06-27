@@ -31,11 +31,11 @@
 
 ### 4. File Operations (30 min)
 
-- [ ] Create context menu for file actions
-- [ ] Implement file download functionality
-- [ ] Add file rename capability
-- [ ] Create file delete with confirmation
-- [ ] Test all file operations
+- [x] Create context menu for file actions
+- [x] Implement file download functionality
+- [x] Add file rename capability
+- [x] Create file delete with confirmation
+- [x] Test all file operations
 
 ### 5. File Organization (30 min)
 

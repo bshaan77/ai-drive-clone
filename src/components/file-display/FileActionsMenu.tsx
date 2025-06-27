@@ -85,10 +85,14 @@ export function FileActionsMenu({
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            onClick={() =>
-              actions.onOpenRenameDialog?.(file) ??
-              actions.onRename(file.id, file.name)
-            }
+            onClick={() => {
+              console.log("Rename clicked for file:", file.name);
+              if (actions.onOpenRenameDialog) {
+                actions.onOpenRenameDialog(file);
+              } else {
+                actions.onRename(file.id, file.name);
+              }
+            }}
           >
             <Edit className="mr-2 h-4 w-4" />
             Rename

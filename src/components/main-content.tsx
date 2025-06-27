@@ -20,6 +20,16 @@ import { FileGrid } from "~/components/file-display/FileGrid";
 import { FileList } from "~/components/file-display/FileList";
 import { BulkActionsToolbar } from "~/components/file-display/BulkActionsToolbar";
 import { RenameDialog } from "~/components/file-display/RenameDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "~/components/ui/alert-dialog";
 import type { FileRecord } from "~/types/file";
 
 const breadcrumbs = [{ name: "My Drive", href: "/" }];
@@ -39,6 +49,10 @@ export function MainContent() {
     isOpen: boolean;
     file: FileRecord | null;
   }>({ isOpen: false, file: null });
+  const [bulkDeleteDialog, setBulkDeleteDialog] = useState<{
+    isOpen: boolean;
+    fileIds: string[];
+  }>({ isOpen: false, fileIds: [] });
 
   const { uploadFiles, isUploading, uploadProgress, uploadError, clearError } =
     useFileUpload();
@@ -144,8 +158,40 @@ export function MainContent() {
       console.log("Download called for file:", fileId);
       const file = files.find((f) => f.id === fileId);
       if (file) {
-        console.log("Opening download URL:", file.blobUrl);
-        window.open(file.blobUrl, "_blank");
+        console.log(
+          "Opening file in new tab:",
+          file.originalName,
+          "URL:",
+          file.blobUrl,
+        );
+
+        // Try to open in new tab first
+        try {
+          const newWindow = window.open(
+            file.blobUrl,
+            "_blank",
+            "noopener,noreferrer",
+          );
+          if (!newWindow) {
+            console.log("Popup blocked, trying alternative method");
+            // Fallback: create a link and click it
+            const link = document.createElement("a");
+            link.href = file.blobUrl;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.download = file.originalName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+        } catch (error) {
+          console.error("Error opening file:", error);
+          // Final fallback: direct download
+          const link = document.createElement("a");
+          link.href = file.blobUrl;
+          link.download = file.originalName;
+          link.click();
+        }
       } else {
         console.error("File not found:", fileId);
       }
@@ -227,25 +273,28 @@ export function MainContent() {
     if (selectedFileIds.length === 0) return;
 
     try {
-      const response = await fetch(
-        `/api/files/bulk?ids=${selectedFileIds.join(",")}`,
-      );
+      const response = await fetch("/api/files/bulk-download", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ fileIds: selectedFileIds }),
+      });
 
       if (!response.ok) {
-        throw new Error("Failed to get files for download");
+        throw new Error("Failed to create bulk download");
       }
 
-      const data = (await response.json()) as {
-        files: Array<{ blobUrl: string; originalName: string }>;
-      };
-
-      // Download each file individually
-      data.files.forEach((file) => {
-        const link = document.createElement("a");
-        link.href = file.blobUrl;
-        link.download = file.originalName;
-        link.click();
-      });
+      // Create a blob from the response and trigger download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `bulk-download-${new Date().toISOString().split("T")[0]}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
 
       clearSelection();
     } catch (error) {
@@ -264,9 +313,30 @@ export function MainContent() {
     // TODO: Implement bulk move
   }, [selection.selectedFiles]);
 
+  const handleBulkRename = useCallback(() => {
+    const selectedFileIds = Array.from(selection.selectedFiles);
+    if (selectedFileIds.length === 0) return;
+
+    // For now, just rename the first selected file
+    const firstFileId = selectedFileIds[0];
+    const firstFile = files.find((f) => f.id === firstFileId);
+    if (firstFile) {
+      console.log("Bulk rename - renaming first file:", firstFile.name);
+      setRenameDialog({ isOpen: true, file: firstFile });
+    }
+  }, [selection.selectedFiles, files]);
+
   const handleBulkDelete = useCallback(async () => {
     const selectedFileIds = Array.from(selection.selectedFiles);
     if (selectedFileIds.length === 0) return;
+
+    // Show confirmation dialog instead of deleting immediately
+    setBulkDeleteDialog({ isOpen: true, fileIds: selectedFileIds });
+  }, [selection.selectedFiles]);
+
+  const confirmBulkDelete = useCallback(async () => {
+    const { fileIds } = bulkDeleteDialog;
+    if (fileIds.length === 0) return;
 
     try {
       const response = await fetch("/api/files/bulk", {
@@ -274,7 +344,7 @@ export function MainContent() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ fileIds: selectedFileIds }),
+        body: JSON.stringify({ fileIds }),
       });
 
       if (!response.ok) {
@@ -285,13 +355,14 @@ export function MainContent() {
       // Refresh the file list
       await fetchFiles();
       clearSelection();
+      setBulkDeleteDialog({ isOpen: false, fileIds: [] });
     } catch (error) {
       console.error("Bulk delete error:", error);
       setError(
         error instanceof Error ? error.message : "Failed to delete files",
       );
     }
-  }, [selection.selectedFiles, fetchFiles, clearSelection]);
+  }, [bulkDeleteDialog, fetchFiles, clearSelection]);
 
   // Sort handler
   const handleSort = useCallback(
@@ -347,6 +418,13 @@ export function MainContent() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-gray-900">My Drive</h1>
           <div className="flex items-center gap-2">
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => setShowUploadModal(true)}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Upload files
+            </Button>
             {hasFiles && (
               <Button
                 variant="outline"
@@ -490,6 +568,7 @@ export function MainContent() {
               onBulkDownload={handleBulkDownload}
               onBulkShare={handleBulkShare}
               onBulkMove={handleBulkMove}
+              onBulkRename={handleBulkRename}
               onBulkDelete={handleBulkDelete}
             />
 
@@ -502,6 +581,7 @@ export function MainContent() {
                 onMove: handleFileMove,
                 onDelete: handleFileDelete,
                 onOpenRenameDialog: (file: FileRecord) => {
+                  console.log("Setting rename dialog for file:", file.name);
                   setRenameDialog({ isOpen: true, file });
                 },
               };
@@ -558,6 +638,37 @@ export function MainContent() {
         file={renameDialog.file}
         onRename={handleFileRename}
       />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog
+        open={bulkDeleteDialog.isOpen}
+        onOpenChange={(open: boolean) => {
+          if (!open) {
+            setBulkDeleteDialog({ isOpen: false, fileIds: [] });
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete files</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {bulkDeleteDialog.fileIds.length}{" "}
+              file
+              {bulkDeleteDialog.fileIds.length > 1 ? "s" : ""}? This action
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmBulkDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }
