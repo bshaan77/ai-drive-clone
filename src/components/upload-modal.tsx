@@ -28,7 +28,7 @@ export function UploadModal({
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
-  const { uploadFiles, multiFileProgress, isUploading, error, clearError } =
+  const { uploadFiles, uploadProgress, isUploading, uploadError, clearError } =
     useFileUpload();
 
   // Handle file selection
@@ -142,10 +142,10 @@ export function UploadModal({
         {/* Content */}
         <div className="p-6">
           {/* Upload Error */}
-          {error && (
+          {uploadError && (
             <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
               <AlertCircle className="h-4 w-4" />
-              <span className="text-sm">{error}</span>
+              <span className="text-sm">{uploadError}</span>
               <Button
                 variant="ghost"
                 size="sm"
@@ -245,27 +245,25 @@ export function UploadModal({
           )}
 
           {/* Upload Progress */}
-          {isUploading && Object.keys(multiFileProgress).length > 0 && (
+          {isUploading && Object.keys(uploadProgress).length > 0 && (
             <div className="mt-6">
               <h3 className="mb-3 text-sm font-medium text-gray-900">
                 Uploading...
               </h3>
               <div className="space-y-3">
-                {Object.entries(multiFileProgress).map(
-                  ([fileName, progress]) => (
-                    <div key={fileName} className="space-y-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="max-w-xs truncate text-gray-600">
-                          {fileName}
-                        </span>
-                        <span className="text-gray-500">
-                          {Math.round(progress)}%
-                        </span>
-                      </div>
-                      <Progress value={progress} className="h-2" />
+                {Object.entries(uploadProgress).map(([fileName, progress]) => (
+                  <div key={fileName} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="max-w-xs truncate text-gray-600">
+                        {fileName}
+                      </span>
+                      <span className="text-gray-500">
+                        {Math.round(progress)}%
+                      </span>
                     </div>
-                  ),
-                )}
+                    <Progress value={progress} className="h-2" />
+                  </div>
+                ))}
               </div>
             </div>
           )}

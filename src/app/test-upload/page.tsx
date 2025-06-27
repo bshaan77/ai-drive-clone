@@ -25,7 +25,8 @@ export default function TestUploadPage() {
     }>
   >([]);
 
-  const { uploadFile, isUploading, progress, error, reset } = useFileUpload();
+  const { uploadFiles, isUploading, uploadProgress, uploadError, clearError } =
+    useFileUpload();
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -52,11 +53,12 @@ export default function TestUploadPage() {
   };
 
   const handleFiles = async (files: File[]) => {
-    for (const file of files) {
-      const result = await uploadFile(file);
-      if (result.success && result.file) {
-        setUploadedFiles((prev) => [...prev, result.file!]);
-      }
+    try {
+      await uploadFiles(files);
+      // Note: The hook doesn't return individual file results anymore
+      // You would need to fetch the uploaded files from the API
+    } catch (error) {
+      console.error("Upload failed:", error);
     }
   };
 
@@ -123,7 +125,7 @@ export default function TestUploadPage() {
           </div>
 
           {/* Upload Progress */}
-          {isUploading && progress && (
+          {isUploading && uploadProgress && (
             <div className="mt-4 rounded-lg bg-blue-50 p-4">
               <div className="mb-2 flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -132,25 +134,25 @@ export default function TestUploadPage() {
               <div className="h-2 w-full rounded-full bg-gray-200">
                 <div
                   className="h-2 rounded-full bg-blue-600 transition-all duration-300"
-                  style={{ width: `${progress.percentage}%` }}
+                  style={{ width: `${uploadProgress.percentage ?? 0}%` }}
                 />
               </div>
               <p className="mt-1 text-xs text-gray-600">
-                {formatFileSize(progress.loaded)} /{" "}
-                {formatFileSize(progress.total)}(
-                {progress.percentage.toFixed(1)}%)
+                {formatFileSize(uploadProgress.loaded ?? 0)} /{" "}
+                {formatFileSize(uploadProgress.total ?? 0)}(
+                {(uploadProgress.percentage ?? 0).toFixed(1)}%)
               </p>
             </div>
           )}
 
           {/* Error Display */}
-          {error && (
+          {uploadError && (
             <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4">
               <div className="flex items-center gap-2">
                 <XCircle className="h-5 w-5 text-red-500" />
                 <span className="font-medium text-red-700">Upload Error</span>
               </div>
-              <p className="mt-1 text-sm text-red-600">{error}</p>
+              <p className="mt-1 text-sm text-red-600">{uploadError}</p>
             </div>
           )}
         </CardContent>
@@ -198,7 +200,7 @@ export default function TestUploadPage() {
                 variant="outline"
                 onClick={() => {
                   setUploadedFiles([]);
-                  reset();
+                  clearError();
                 }}
               >
                 Clear All

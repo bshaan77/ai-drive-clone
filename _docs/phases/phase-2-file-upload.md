@@ -21,13 +21,13 @@
 - [x] Add file size and type validation
 - [x] Test file storage and retrieval
 
-### 3. File Display Components (45 min)
+### 3. File Display Components (45 min) ✅
 
-- [ ] Use V0 to create file grid component
-- [ ] Create file card with icon, name, size, date
-- [ ] Add file list view option
-- [ ] Implement file selection (single/multiple)
-- [ ] Add hover states and basic interactions
+- [x] Use V0 to create file grid component
+- [x] Create file card with icon, name, size, date
+- [x] Add file list view option
+- [x] Implement file selection (single/multiple)
+- [x] Add hover states and basic interactions
 
 ### 4. File Operations (30 min)
 

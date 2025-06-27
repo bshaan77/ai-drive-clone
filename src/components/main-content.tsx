@@ -1,101 +1,46 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import type React from "react";
+
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   ChevronRight,
-  Folder,
-  FileText,
-  ImageIcon,
-  Video,
-  MoreVertical,
-  Download,
-  Share,
-  Star,
-  Trash2,
   Plus,
   Upload,
   X,
   AlertCircle,
-  File,
-  Music,
-  Archive,
+  Folder,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent } from "~/components/ui/card";
 import { Progress } from "~/components/ui/progress";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
 import { useFileUpload } from "~/hooks/use-file-upload";
+import { useFileSelection } from "~/hooks/useFileSelection";
 import { UploadModal } from "~/components/upload-modal";
-import { getFileIcon, getFileCategory, formatFileSize } from "~/lib/file-utils";
+import { FileGrid } from "~/components/file-display/FileGrid";
+import { FileList } from "~/components/file-display/FileList";
+import { BulkActionsToolbar } from "~/components/file-display/BulkActionsToolbar";
+import type { FileRecord } from "~/types/file";
 
 const breadcrumbs = [{ name: "My Drive", href: "/" }];
 
-// Enhanced file type icons mapping using utilities
-const getFileIconComponent = (mimeType: string) => {
-  const category = getFileCategory(mimeType);
-
-  switch (category) {
-    case "image":
-      return ImageIcon;
-    case "video":
-      return Video;
-    case "audio":
-      return Music;
-    case "archive":
-      return Archive;
-    case "document":
-    case "pdf":
-    case "text":
-      return FileText;
-    default:
-      return File;
-  }
-};
-
-// File interface with enhanced metadata
-interface FileRecord {
-  id: string;
-  name: string;
-  originalName: string;
-  mimeType: string;
-  size: number;
-  sizeFormatted: string;
-  blobUrl: string;
-  category: string;
-  icon: string;
-  folderId: string | null;
-  isPublic: boolean;
-  createdAt: string;
-  updatedAt: string;
-  metadata: Record<string, unknown>;
-  isImage: boolean;
-  isVideo: boolean;
-  isAudio: boolean;
-  isDocument: boolean;
-  isArchive: boolean;
-}
-
 export function MainContent() {
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [files, setFiles] = useState<FileRecord[]>([]);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [sortField, setSortField] = useState<
+    "name" | "size" | "createdAt" | "category"
+  >("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  const {
-    uploadFiles,
-    multiFileProgress,
-    isUploading,
-    error: uploadError,
-    clearError,
-  } = useFileUpload();
+  const { uploadFiles, isUploading, uploadProgress, uploadError, clearError } =
+    useFileUpload();
+
+  // File selection hook
+  const { selection, handleSelect, handleSelectAll, clearSelection } =
+    useFileSelection(useMemo(() => files.map((f) => f.id), [files]));
 
   // Fetch files from database
   const fetchFiles = useCallback(async () => {
@@ -190,8 +135,78 @@ export function MainContent() {
     return new Date(dateString).toLocaleDateString();
   };
 
+  // File actions handlers
+  const handleFileDownload = useCallback(
+    (fileId: string) => {
+      const file = files.find((f) => f.id === fileId);
+      if (file) {
+        window.open(file.blobUrl, "_blank");
+      }
+    },
+    [files],
+  );
+
+  const handleFileShare = useCallback((fileId: string) => {
+    console.log("Share file:", fileId);
+    // TODO: Implement file sharing
+  }, []);
+
+  const handleFileRename = useCallback((fileId: string, newName: string) => {
+    console.log("Rename file:", fileId, "to:", newName);
+    // TODO: Implement file renaming
+  }, []);
+
+  const handleFileMove = useCallback((fileId: string, folderId: string) => {
+    console.log("Move file:", fileId, "to folder:", folderId);
+    // TODO: Implement file moving
+  }, []);
+
+  const handleFileDelete = useCallback((fileId: string) => {
+    console.log("Delete file:", fileId);
+    // TODO: Implement file deletion
+  }, []);
+
+  // Bulk actions handlers
+  const handleBulkDownload = useCallback(() => {
+    console.log("Bulk download:", Array.from(selection.selectedFiles));
+    // TODO: Implement bulk download
+  }, [selection.selectedFiles]);
+
+  const handleBulkShare = useCallback(() => {
+    console.log("Bulk share:", Array.from(selection.selectedFiles));
+    // TODO: Implement bulk share
+  }, [selection.selectedFiles]);
+
+  const handleBulkMove = useCallback(() => {
+    console.log("Bulk move:", Array.from(selection.selectedFiles));
+    // TODO: Implement bulk move
+  }, [selection.selectedFiles]);
+
+  const handleBulkDelete = useCallback(() => {
+    console.log("Bulk delete:", Array.from(selection.selectedFiles));
+    // TODO: Implement bulk delete
+  }, [selection.selectedFiles]);
+
+  const handleBulkStar = useCallback(() => {
+    console.log("Bulk star:", Array.from(selection.selectedFiles));
+    // TODO: Implement bulk star
+  }, [selection.selectedFiles]);
+
+  // Sort handler
+  const handleSort = useCallback(
+    (field: "name" | "size" | "createdAt" | "category") => {
+      if (sortField === field) {
+        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      } else {
+        setSortField(field);
+        setSortOrder("asc");
+      }
+    },
+    [sortField, sortOrder],
+  );
+
   const hasFiles = files.length > 0;
-  const showUploadZone = !hasFiles || isUploading;
+  const shouldShowUploadZone = !hasFiles || isUploading;
 
   if (isLoading) {
     return (
@@ -279,7 +294,7 @@ export function MainContent() {
         )}
 
         {/* Upload Zone */}
-        {showUploadZone && (
+        {shouldShowUploadZone && (
           <div
             className={`relative rounded-lg border-2 border-dashed transition-all duration-200 ${
               isDragOver
@@ -300,7 +315,7 @@ export function MainContent() {
                     <p className="text-lg font-medium text-gray-900">
                       Uploading files...
                     </p>
-                    {Object.entries(multiFileProgress).map(
+                    {Object.entries(uploadProgress).map(
                       ([fileName, progress]) => (
                         <div key={fileName} className="space-y-1">
                           <div className="flex justify-between text-sm text-gray-600">
@@ -364,107 +379,55 @@ export function MainContent() {
           </div>
         )}
 
-        {/* Files Grid */}
+        {/* Files Display */}
         {hasFiles && (
-          <div
-            className={`grid gap-4 ${
-              viewMode === "grid"
-                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                : "grid-cols-1"
-            }`}
-          >
-            {files.map((file) => {
-              const FileIcon = getFileIconComponent(file.mimeType);
-              return (
-                <Card
-                  key={file.id}
-                  className="group cursor-pointer border-gray-200 transition-all duration-200 hover:border-gray-300 hover:shadow-md"
-                >
-                  <CardContent className="p-4">
-                    <div className="mb-3 flex items-start justify-between">
-                      <div
-                        className={`rounded-lg p-2 ${
-                          file.category === "image"
-                            ? "bg-green-50 text-green-600"
-                            : file.category === "video"
-                              ? "bg-purple-50 text-purple-600"
-                              : file.category === "audio"
-                                ? "bg-yellow-50 text-yellow-600"
-                                : file.category === "archive"
-                                  ? "bg-orange-50 text-orange-600"
-                                  : "bg-gray-50 text-gray-600"
-                        }`}
-                      >
-                        <FileIcon className="h-6 w-6" />
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 opacity-0 transition-opacity group-hover:opacity-100"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Download className="mr-2 h-4 w-4" />
-                            Download
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Share className="mr-2 h-4 w-4" />
-                            Share
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Star className="mr-2 h-4 w-4" />
-                            Star
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+          <>
+            {/* Bulk Actions Toolbar */}
+            <BulkActionsToolbar
+              selection={selection}
+              onClearSelection={clearSelection}
+              onBulkDownload={handleBulkDownload}
+              onBulkShare={handleBulkShare}
+              onBulkMove={handleBulkMove}
+              onBulkDelete={handleBulkDelete}
+              onBulkStar={handleBulkStar}
+            />
 
-                    <div className="space-y-2">
-                      <h3
-                        className="truncate font-medium text-gray-900"
-                        title={file.name}
-                      >
-                        {file.name}
-                      </h3>
-                      <div className="flex items-center justify-between text-sm text-gray-500">
-                        <span>{file.sizeFormatted}</span>
-                        <span>{formatDate(file.createdAt)}</span>
-                      </div>
-                      {file.category && (
-                        <div className="text-xs text-gray-400 capitalize">
-                          {file.category}
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+            {/* File Actions */}
+            {(() => {
+              const fileActions = {
+                onDownload: handleFileDownload,
+                onShare: handleFileShare,
+                onRename: handleFileRename,
+                onMove: handleFileMove,
+                onDelete: handleFileDelete,
+              };
+
+              return viewMode === "grid" ? (
+                <FileGrid
+                  files={files}
+                  selection={selection}
+                  onSelect={handleSelect}
+                  actions={fileActions}
+                  isLoading={isLoading}
+                  onUpload={() => setShowUploadModal(true)}
+                />
+              ) : (
+                <FileList
+                  files={files}
+                  selection={selection}
+                  onSelect={handleSelect}
+                  onSelectAll={handleSelectAll}
+                  actions={fileActions}
+                  sortField={sortField}
+                  sortOrder={sortOrder}
+                  onSort={handleSort}
+                  isLoading={isLoading}
+                  onUpload={() => setShowUploadModal(true)}
+                />
               );
-            })}
-          </div>
-        )}
-
-        {/* Quick Upload Button */}
-        {hasFiles && !isUploading && (
-          <div className="flex justify-center pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setIsUploadModalOpen(true)}
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Upload more files
-            </Button>
-          </div>
+            })()}
+          </>
         )}
       </div>
 
@@ -472,7 +435,7 @@ export function MainContent() {
       <Button
         size="icon"
         className="fixed right-6 bottom-6 h-14 w-14 rounded-full bg-blue-600 shadow-lg hover:bg-blue-700 lg:hidden"
-        onClick={() => setIsUploadModalOpen(true)}
+        onClick={() => setShowUploadModal(true)}
       >
         <Plus className="h-6 w-6" />
         <span className="sr-only">Upload files</span>
@@ -480,8 +443,8 @@ export function MainContent() {
 
       {/* Upload Modal */}
       <UploadModal
-        isOpen={isUploadModalOpen}
-        onClose={() => setIsUploadModalOpen(false)}
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
         onUploadComplete={handleUploadComplete}
       />
     </main>

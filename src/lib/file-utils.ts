@@ -6,6 +6,19 @@
  */
 
 import { type ClassValue, clsx } from "clsx";
+import type { FileCategory } from "~/types/file";
+import {
+  FileText,
+  ImageIcon,
+  Video,
+  Music,
+  Archive,
+  Code,
+  FileSpreadsheet,
+  Presentation,
+  FileType,
+  File,
+} from "lucide-react";
 
 /**
  * File type categories for better organization
@@ -24,8 +37,58 @@ export const FILE_CATEGORIES = {
   UNKNOWN: "unknown",
 } as const;
 
-export type FileCategory =
-  (typeof FILE_CATEGORIES)[keyof typeof FILE_CATEGORIES];
+export const FILE_CATEGORY_CONFIG = {
+  image: {
+    color: "bg-green-50 text-green-600 border-green-200",
+    icon: ImageIcon,
+    label: "Image",
+  },
+  video: {
+    color: "bg-purple-50 text-purple-600 border-purple-200",
+    icon: Video,
+    label: "Video",
+  },
+  audio: {
+    color: "bg-orange-50 text-orange-600 border-orange-200",
+    icon: Music,
+    label: "Audio",
+  },
+  document: {
+    color: "bg-blue-50 text-blue-600 border-blue-200",
+    icon: FileText,
+    label: "Document",
+  },
+  archive: {
+    color: "bg-yellow-50 text-yellow-600 border-yellow-200",
+    icon: Archive,
+    label: "Archive",
+  },
+  code: {
+    color: "bg-gray-50 text-gray-600 border-gray-200",
+    icon: Code,
+    label: "Code",
+  },
+  spreadsheet: {
+    color: "bg-emerald-50 text-emerald-600 border-emerald-200",
+    icon: FileSpreadsheet,
+    label: "Spreadsheet",
+  },
+  presentation: {
+    color: "bg-red-50 text-red-600 border-red-200",
+    icon: Presentation,
+    label: "Presentation",
+  },
+  pdf: {
+    color: "bg-rose-50 text-rose-600 border-rose-200",
+    icon: FileType,
+    label: "PDF",
+  },
+  text: {
+    color: "bg-slate-50 text-slate-600 border-slate-200",
+    icon: File,
+    label: "Text",
+  },
+} as const;
 
 /**
  * File type detection and categorization
@@ -59,6 +122,13 @@ export function getFileCategory(mimeType: string): FileCategory {
     return FILE_CATEGORIES.CODE;
   if (mimeType.startsWith("text/")) return FILE_CATEGORIES.TEXT;
   return FILE_CATEGORIES.UNKNOWN;
+}
+
+/**
+ * Alternative function name for compatibility
+ */
+export function getCategoryFromMimeType(mimeType: string): FileCategory {
+  return getFileCategory(mimeType);
 }
 
 /**
@@ -104,6 +174,22 @@ export function formatFileSize(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+}
+
+/**
+ * Format date with relative time
+ */
+export function formatDate(date: Date | string): string {
+  const dateObj = typeof date === "string" ? new Date(date) : date;
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - dateObj.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 1) return "Today";
+  if (diffDays === 2) return "Yesterday";
+  if (diffDays <= 7) return `${diffDays - 1} days ago`;
+  if (diffDays <= 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
+  return dateObj.toLocaleDateString();
 }
 
 /**
@@ -254,6 +340,20 @@ export function generateSafeFilename(originalName: string): string {
  */
 export function getFileExtension(filename: string): string {
   return filename.split(".").pop()?.toLowerCase() ?? "";
+}
+
+/**
+ * Truncate filename for display
+ */
+export function truncateFileName(name: string, maxLength = 30): string {
+  if (name.length <= maxLength) return name;
+  const extension = name.split(".").pop();
+  const nameWithoutExt = name.substring(0, name.lastIndexOf("."));
+  const truncatedName = nameWithoutExt.substring(
+    0,
+    maxLength - extension!.length - 4,
+  );
+  return `${truncatedName}...${extension}`;
 }
 
 /**
