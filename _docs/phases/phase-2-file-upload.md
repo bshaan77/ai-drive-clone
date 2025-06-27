@@ -49,7 +49,7 @@
 
 - [x] Users can upload files via drag-and-drop or file picker
 - [x] Files display in grid/list view with proper metadata
-- [ ] File operations (download, rename, delete) work
+- [x] File operations (download, rename, delete) work
 - [ ] Users can create and navigate folders
 - [x] File upload shows progress and handles errors
 

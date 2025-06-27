@@ -20,6 +20,7 @@ import { FileGrid } from "~/components/file-display/FileGrid";
 import { FileList } from "~/components/file-display/FileList";
 import { BulkActionsToolbar } from "~/components/file-display/BulkActionsToolbar";
 import { RenameDialog } from "~/components/file-display/RenameDialog";
+import { BulkContextMenu } from "~/components/file-display/BulkContextMenu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -474,143 +475,167 @@ export function MainContent() {
 
         {/* Upload Zone */}
         {shouldShowUploadZone && (
-          <div
-            className={`relative rounded-lg border-2 border-dashed transition-all duration-200 ${
-              isDragOver
-                ? "border-blue-400 bg-blue-50"
-                : "border-gray-300 hover:border-gray-400"
-            } ${isUploading ? "bg-gray-50" : "bg-white"}`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
+          <BulkContextMenu
+            onUpload={() => setShowUploadModal(true)}
+            onNewFolder={() => {
+              // TODO: Implement folder creation
+              console.log("New folder clicked");
+            }}
           >
-            <div className="p-8 text-center lg:p-12">
-              {isUploading ? (
-                <div className="space-y-4">
-                  <div className="flex justify-center">
-                    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-lg font-medium text-gray-900">
-                      Uploading files...
-                    </p>
-                    {Object.entries(uploadProgress).map(
-                      ([fileName, progress]) => (
-                        <div key={fileName} className="space-y-1">
-                          <div className="flex justify-between text-sm text-gray-600">
-                            <span className="max-w-xs truncate">
-                              {fileName}
-                            </span>
-                            <span>{Math.round(progress)}%</span>
+            <div
+              className={`relative rounded-lg border-2 border-dashed transition-all duration-200 ${
+                isDragOver
+                  ? "border-blue-400 bg-blue-50"
+                  : "border-gray-300 hover:border-gray-400"
+              } ${isUploading ? "bg-gray-50" : "bg-white"}`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <div className="p-8 text-center lg:p-12">
+                {isUploading ? (
+                  <div className="space-y-4">
+                    <div className="flex justify-center">
+                      <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-lg font-medium text-gray-900">
+                        Uploading files...
+                      </p>
+                      {Object.entries(uploadProgress).map(
+                        ([fileName, progress]) => (
+                          <div key={fileName} className="space-y-1">
+                            <div className="flex justify-between text-sm text-gray-600">
+                              <span className="max-w-xs truncate">
+                                {fileName}
+                              </span>
+                              <span>{Math.round(progress)}%</span>
+                            </div>
+                            <Progress value={progress} className="h-2" />
                           </div>
-                          <Progress value={progress} className="h-2" />
-                        </div>
-                      ),
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex justify-center">
-                    <div className="rounded-full bg-blue-50 p-4">
-                      <Upload className="h-8 w-8 text-blue-600" />
+                        ),
+                      )}
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-medium text-gray-900">
-                      {isDragOver ? "Drop files here" : "Upload files to Drive"}
-                    </h3>
-                    <p className="text-gray-500">
-                      Drag and drop files here, or click to select files
-                    </p>
-                    <p className="text-sm text-gray-400">
-                      Maximum file size: 15MB
-                    </p>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex justify-center">
+                      <div className="rounded-full bg-blue-50 p-4">
+                        <Upload className="h-8 w-8 text-blue-600" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-medium text-gray-900">
+                        {isDragOver
+                          ? "Drop files here"
+                          : "Upload files to Drive"}
+                      </h3>
+                      <p className="text-gray-500">
+                        Drag and drop files here, or click to select files
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        Maximum file size: 15MB
+                      </p>
+                    </div>
+                    <div className="flex flex-col justify-center gap-3 sm:flex-row">
+                      <Button
+                        className="bg-blue-600 hover:bg-blue-700"
+                        onClick={() =>
+                          document.getElementById("file-input")?.click()
+                        }
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Select files
+                      </Button>
+                      <Button variant="outline">
+                        <Folder className="mr-2 h-4 w-4" />
+                        New folder
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex flex-col justify-center gap-3 sm:flex-row">
-                    <Button
-                      className="bg-blue-600 hover:bg-blue-700"
-                      onClick={() =>
-                        document.getElementById("file-input")?.click()
-                      }
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Select files
-                    </Button>
-                    <Button variant="outline">
-                      <Folder className="mr-2 h-4 w-4" />
-                      New folder
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            {/* Hidden file input */}
-            <input
-              id="file-input"
-              type="file"
-              multiple
-              className="hidden"
-              onChange={handleFileInputChange}
-              accept="*/*"
-            />
-          </div>
+              {/* Hidden file input */}
+              <input
+                id="file-input"
+                type="file"
+                multiple
+                className="hidden"
+                onChange={handleFileInputChange}
+                accept="*/*"
+              />
+            </div>
+          </BulkContextMenu>
         )}
 
         {/* Files Display */}
         {hasFiles && (
-          <>
-            {/* Bulk Actions Toolbar */}
-            <BulkActionsToolbar
-              selection={selection}
-              onClearSelection={clearSelection}
-              onBulkDownload={handleBulkDownload}
-              onBulkShare={handleBulkShare}
-              onBulkMove={handleBulkMove}
-              onBulkRename={handleBulkRename}
-              onBulkDelete={handleBulkDelete}
-            />
+          <BulkContextMenu
+            onUpload={() => setShowUploadModal(true)}
+            onNewFolder={() => {
+              // TODO: Implement folder creation
+              console.log("New folder clicked");
+            }}
+            onBulkDownload={handleBulkDownload}
+            onBulkShare={handleBulkShare}
+            onBulkRename={handleBulkRename}
+            onBulkMove={handleBulkMove}
+            onBulkDelete={handleBulkDelete}
+            hasSelection={selection.selectedFiles.size > 0}
+          >
+            <div>
+              {/* Bulk Actions Toolbar */}
+              <BulkActionsToolbar
+                selection={selection}
+                onClearSelection={clearSelection}
+                onBulkDownload={handleBulkDownload}
+                onBulkShare={handleBulkShare}
+                onBulkMove={handleBulkMove}
+                onBulkRename={handleBulkRename}
+                onBulkDelete={handleBulkDelete}
+              />
 
-            {/* File Actions */}
-            {(() => {
-              const fileActions = {
-                onDownload: handleFileDownload,
-                onShare: handleFileShare,
-                onRename: handleFileRename,
-                onMove: handleFileMove,
-                onDelete: handleFileDelete,
-                onOpenRenameDialog: (file: FileRecord) => {
-                  console.log("Setting rename dialog for file:", file.name);
-                  setRenameDialog({ isOpen: true, file });
-                },
-              };
+              {/* File Actions */}
+              {(() => {
+                const fileActions = {
+                  onDownload: handleFileDownload,
+                  onShare: handleFileShare,
+                  onRename: handleFileRename,
+                  onMove: handleFileMove,
+                  onDelete: handleFileDelete,
+                  onOpenRenameDialog: (file: FileRecord) => {
+                    console.log("Setting rename dialog for file:", file.name);
+                    setRenameDialog({ isOpen: true, file });
+                  },
+                };
 
-              return viewMode === "grid" ? (
-                <FileGrid
-                  files={files}
-                  selection={selection}
-                  onSelect={handleSelect}
-                  actions={fileActions}
-                  isLoading={isLoading}
-                  onUpload={() => setShowUploadModal(true)}
-                />
-              ) : (
-                <FileList
-                  files={files}
-                  selection={selection}
-                  onSelect={handleSelect}
-                  onSelectAll={handleSelectAll}
-                  actions={fileActions}
-                  sortField={sortField}
-                  sortOrder={sortOrder}
-                  onSort={handleSort}
-                  isLoading={isLoading}
-                  onUpload={() => setShowUploadModal(true)}
-                />
-              );
-            })()}
-          </>
+                return viewMode === "grid" ? (
+                  <FileGrid
+                    files={files}
+                    selection={selection}
+                    onSelect={handleSelect}
+                    actions={fileActions}
+                    isLoading={isLoading}
+                    onUpload={() => setShowUploadModal(true)}
+                  />
+                ) : (
+                  <FileList
+                    files={files}
+                    selection={selection}
+                    onSelect={handleSelect}
+                    onSelectAll={handleSelectAll}
+                    actions={fileActions}
+                    sortField={sortField}
+                    sortOrder={sortOrder}
+                    onSort={handleSort}
+                    isLoading={isLoading}
+                    onUpload={() => setShowUploadModal(true)}
+                  />
+                );
+              })()}
+            </div>
+          </BulkContextMenu>
         )}
       </div>
 
