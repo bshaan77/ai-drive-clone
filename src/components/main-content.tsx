@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   ChevronRight,
   Folder,
@@ -31,86 +31,108 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { useFileUpload } from "~/hooks/use-file-upload";
+import { UploadModal } from "~/components/upload-modal";
+import { getFileIcon, getFileCategory, formatFileSize } from "~/lib/file-utils";
 
 const breadcrumbs = [{ name: "My Drive", href: "/" }];
 
-// File type icons mapping
-const getFileIcon = (type: string, mimeType?: string) => {
-  if (type === "folder") return Folder;
-  if (mimeType?.startsWith("image/")) return ImageIcon;
-  if (mimeType?.startsWith("video/")) return Video;
-  if (mimeType?.startsWith("audio/")) return Music;
-  if (
-    mimeType?.includes("pdf") ||
-    mimeType?.includes("document") ||
-    mimeType?.includes("text")
-  )
-    return FileText;
-  if (mimeType?.includes("zip") || mimeType?.includes("archive"))
-    return Archive;
-  return File;
+// Enhanced file type icons mapping using utilities
+const getFileIconComponent = (mimeType: string) => {
+  const category = getFileCategory(mimeType);
+
+  switch (category) {
+    case "image":
+      return ImageIcon;
+    case "video":
+      return Video;
+    case "audio":
+      return Music;
+    case "archive":
+      return Archive;
+    case "document":
+    case "pdf":
+    case "text":
+      return FileText;
+    default:
+      return File;
+  }
 };
 
-// Format file size
-const formatFileSize = (bytes: number) => {
-  if (bytes === 0) return "0 Bytes";
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return (
-    Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
-  );
-};
-
-// Format date
-const formatDate = (date: Date) => {
-  const now = new Date();
-  const diffTime = Math.abs(now.getTime() - date.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 1) return "Today";
-  if (diffDays === 2) return "Yesterday";
-  if (diffDays <= 7) return `${diffDays - 1} days ago`;
-  return date.toLocaleDateString();
-};
-
-interface UploadedFile {
+// File interface with enhanced metadata
+interface FileRecord {
   id: string;
   name: string;
-  size: number;
-  type: string;
+  originalName: string;
   mimeType: string;
-  uploadedAt: Date;
-  url?: string;
+  size: number;
+  sizeFormatted: string;
+  blobUrl: string;
+  category: string;
+  icon: string;
+  folderId: string | null;
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+  metadata: Record<string, unknown>;
+  isImage: boolean;
+  isVideo: boolean;
+  isAudio: boolean;
+  isDocument: boolean;
+  isArchive: boolean;
 }
 
 export function MainContent() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [files, setFiles] = useState<FileRecord[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const { uploadFiles, multiFileProgress, isUploading, error, clearError } =
-    useFileUpload();
+  const {
+    uploadFiles,
+    multiFileProgress,
+    isUploading,
+    error: uploadError,
+    clearError,
+  } = useFileUpload();
+
+  // Fetch files from database
+  const fetchFiles = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch("/api/files");
+      const data = (await response.json()) as {
+        success: boolean;
+        files?: FileRecord[];
+        error?: string;
+      };
+
+      if (response.ok && data.success) {
+        setFiles(data.files ?? []);
+      } else {
+        setError(data.error ?? "Failed to fetch files");
+      }
+    } catch (err) {
+      setError("Failed to fetch files");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Load files on component mount
+  useEffect(() => {
+    void fetchFiles();
+  }, [fetchFiles]);
 
   // Handle file upload completion
-  const handleUploadComplete = useCallback((files: File[]) => {
-    const newFiles: UploadedFile[] = files.map((file, index) => ({
-      id: `${Date.now()}-${index}`,
-      name: file.name,
-      size: file.size,
-      type: file.type.startsWith("image/")
-        ? "image"
-        : file.type.startsWith("video/")
-          ? "video"
-          : file.type.includes("folder")
-            ? "folder"
-            : "document",
-      mimeType: file.type,
-      uploadedAt: new Date(),
-    }));
-
-    setUploadedFiles((prev) => [...prev, ...newFiles]);
-  }, []);
+  const handleUploadComplete = useCallback(
+    async (uploadedFiles: File[]) => {
+      // Refresh the file list after upload
+      await fetchFiles();
+    },
+    [fetchFiles],
+  );
 
   // Handle file selection
   const handleFileSelect = useCallback(
@@ -118,7 +140,7 @@ export function MainContent() {
       const fileArray = Array.from(files);
       try {
         await uploadFiles(fileArray);
-        handleUploadComplete(fileArray);
+        await handleUploadComplete(fileArray);
       } catch (error) {
         console.error("Upload failed:", error);
       }
@@ -163,8 +185,26 @@ export function MainContent() {
     [handleFileSelect],
   );
 
-  const hasFiles = uploadedFiles.length > 0;
+  // Format date
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const hasFiles = files.length > 0;
   const showUploadZone = !hasFiles || isUploading;
+
+  if (isLoading) {
+    return (
+      <main className="flex-1 overflow-auto">
+        <div className="flex h-full items-center justify-center">
+          <div className="text-center">
+            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+            <p className="text-gray-600">Loading your files...</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex-1 overflow-auto">
@@ -206,11 +246,27 @@ export function MainContent() {
           </div>
         </div>
 
-        {/* Upload Error */}
+        {/* Error Display */}
         {error && (
           <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
             <AlertCircle className="h-4 w-4" />
             <span className="text-sm">{error}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setError(null)}
+              className="ml-auto h-6 w-6 p-0 text-red-700 hover:bg-red-100"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
+
+        {/* Upload Error */}
+        {uploadError && (
+          <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
+            <AlertCircle className="h-4 w-4" />
+            <span className="text-sm">{uploadError}</span>
             <Button
               variant="ghost"
               size="sm"
@@ -317,8 +373,8 @@ export function MainContent() {
                 : "grid-cols-1"
             }`}
           >
-            {uploadedFiles.map((file) => {
-              const FileIcon = getFileIcon(file.type, file.mimeType);
+            {files.map((file) => {
+              const FileIcon = getFileIconComponent(file.mimeType);
               return (
                 <Card
                   key={file.id}
@@ -328,27 +384,27 @@ export function MainContent() {
                     <div className="mb-3 flex items-start justify-between">
                       <div
                         className={`rounded-lg p-2 ${
-                          file.type === "folder"
-                            ? "bg-blue-50 text-blue-600"
-                            : file.type === "image"
-                              ? "bg-green-50 text-green-600"
-                              : file.type === "video"
-                                ? "bg-purple-50 text-purple-600"
-                                : "bg-gray-50 text-gray-600"
+                          file.category === "image"
+                            ? "bg-green-50 text-green-600"
+                            : file.category === "video"
+                              ? "bg-purple-50 text-purple-600"
+                              : file.category === "audio"
+                                ? "bg-yellow-50 text-yellow-600"
+                                : file.category === "archive"
+                                  ? "bg-orange-50 text-orange-600"
+                                  : "bg-gray-50 text-gray-600"
                         }`}
                       >
                         <FileIcon className="h-6 w-6" />
                       </div>
-
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100"
+                            size="sm"
+                            className="h-8 w-8 p-0 opacity-0 transition-opacity group-hover:opacity-100"
                           >
                             <MoreVertical className="h-4 w-4" />
-                            <span className="sr-only">More options</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -362,12 +418,12 @@ export function MainContent() {
                           </DropdownMenuItem>
                           <DropdownMenuItem>
                             <Star className="mr-2 h-4 w-4" />
-                            Add to starred
+                            Star
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-red-600">
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Move to trash
+                            Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -381,9 +437,14 @@ export function MainContent() {
                         {file.name}
                       </h3>
                       <div className="flex items-center justify-between text-sm text-gray-500">
-                        <span>{formatFileSize(file.size)}</span>
-                        <span>{formatDate(file.uploadedAt)}</span>
+                        <span>{file.sizeFormatted}</span>
+                        <span>{formatDate(file.createdAt)}</span>
                       </div>
+                      {file.category && (
+                        <div className="text-xs text-gray-400 capitalize">
+                          {file.category}
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -397,7 +458,7 @@ export function MainContent() {
           <div className="flex justify-center pt-4">
             <Button
               variant="outline"
-              onClick={() => document.getElementById("file-input")?.click()}
+              onClick={() => setIsUploadModalOpen(true)}
               className="gap-2"
             >
               <Plus className="h-4 w-4" />
@@ -411,11 +472,18 @@ export function MainContent() {
       <Button
         size="icon"
         className="fixed right-6 bottom-6 h-14 w-14 rounded-full bg-blue-600 shadow-lg hover:bg-blue-700 lg:hidden"
-        onClick={() => document.getElementById("file-input")?.click()}
+        onClick={() => setIsUploadModalOpen(true)}
       >
         <Plus className="h-6 w-6" />
         <span className="sr-only">Upload files</span>
       </Button>
+
+      {/* Upload Modal */}
+      <UploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onUploadComplete={handleUploadComplete}
+      />
     </main>
   );
 }

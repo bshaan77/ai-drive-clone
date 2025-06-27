@@ -12,6 +12,15 @@ import { db } from "~/server/db";
 import { files } from "~/server/db/schema";
 import { eq } from "drizzle-orm";
 import { users } from "~/server/db/schema";
+import {
+  validateFileSize,
+  validateFileType,
+  generateSafeFilename,
+  getFileCategory,
+  getFileIcon,
+  formatFileSize,
+  type FileMetadata,
+} from "~/lib/file-utils";
 
 // Maximum file size (15MB)
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
@@ -105,33 +114,60 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    // Check file size
-    if (file.size > MAX_FILE_SIZE) {
+    // Enhanced file validation using utilities
+    if (!validateFileSize(file.size, MAX_FILE_SIZE)) {
       return NextResponse.json(
-        { error: "File too large. Maximum size is 15MB" },
+        {
+          error: `File too large. Maximum size is ${formatFileSize(MAX_FILE_SIZE)}`,
+          details: {
+            fileSize: formatFileSize(file.size),
+            maxSize: formatFileSize(MAX_FILE_SIZE),
+          },
+        },
         { status: 400 },
       );
     }
 
-    // Check file type
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    if (!validateFileType(file.type, ALLOWED_TYPES)) {
       return NextResponse.json(
-        { error: "File type not allowed" },
+        {
+          error: "File type not allowed",
+          details: {
+            fileType: file.type,
+            allowedTypes: ALLOWED_TYPES,
+          },
+        },
         { status: 400 },
       );
     }
 
-    // Generate unique filename
-    const timestamp = Date.now();
-    const randomId = Math.random().toString(36).substring(2, 15);
-    const extension = file.name.split(".").pop();
-    const filename = `${timestamp}-${randomId}.${extension}`;
+    // Generate safe filename using utility
+    const safeFilename = generateSafeFilename(file.name);
 
     // Upload to Vercel Blob
-    const blob = await put(filename, file, {
+    const blob = await put(safeFilename, file, {
       access: "public",
       addRandomSuffix: false,
     });
+
+    // Extract file metadata using utilities
+    const fileCategory = getFileCategory(file.type);
+    const fileIcon = getFileIcon(file.type);
+
+    // Create enhanced metadata
+    const metadata: FileMetadata = {
+      originalName: file.name,
+      mimeType: file.type,
+      size: file.size,
+      lastModified: file.lastModified,
+      uploadedAt: new Date().toISOString(),
+      category: fileCategory,
+      icon: fileIcon,
+      blobId: blob.pathname,
+      contentType: file.type,
+      // Additional metadata that could be extracted on the client side
+      // dimensions, duration, etc. would be added here if needed
+    };
 
     // Store file metadata in database
     const fileRecords = await db
@@ -143,12 +179,8 @@ export async function POST(request: NextRequest) {
         size: file.size,
         blobUrl: blob.url,
         folderId: folderId ?? null,
-        ownerId: userRecord.id, // Use the internal user ID
-        metadata: {
-          uploadedAt: new Date().toISOString(),
-          blobId: blob.pathname,
-          contentType: file.type,
-        },
+        ownerId: userRecord.id,
+        metadata: metadata,
       })
       .returning();
 
@@ -162,10 +194,14 @@ export async function POST(request: NextRequest) {
       file: {
         id: fileRecord.id,
         name: fileRecord.name,
+        originalName: fileRecord.originalName,
         size: fileRecord.size,
         mimeType: fileRecord.mimeType,
         url: fileRecord.blobUrl,
+        category: fileCategory,
+        icon: fileIcon,
         uploadedAt: fileRecord.createdAt,
+        metadata: fileRecord.metadata,
       },
     });
   } catch (error) {
