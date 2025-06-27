@@ -16,8 +16,6 @@ import { Progress } from "~/components/ui/progress";
 import { useFileUpload } from "~/hooks/use-file-upload";
 import { useFileSelection } from "~/hooks/useFileSelection";
 import { UploadModal } from "~/components/upload-modal";
-import { FileGrid } from "~/components/file-display/FileGrid";
-import { FileList } from "~/components/file-display/FileList";
 import { BulkActionsToolbar } from "~/components/file-display/BulkActionsToolbar";
 import { RenameDialog } from "~/components/file-display/RenameDialog";
 import { BulkContextMenu } from "~/components/file-display/BulkContextMenu";
@@ -35,6 +33,12 @@ import type { FileRecord } from "~/types/file";
 import { CreateFolderDialog } from "~/components/file-display/CreateFolderDialog";
 import { FolderCard } from "~/components/file-display/FolderCard";
 import { FileCard } from "~/components/file-display/FileCard";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 
 interface MainContentProps {
   currentFolderId: string | null;
@@ -73,7 +77,6 @@ export function MainContent({
       parentId?: string;
     }>
   >([]);
-  const [isLoadingFolders, setIsLoadingFolders] = useState(false);
   const [folderPath, setFolderPath] = useState<
     Array<{
       id: string;
@@ -85,16 +88,17 @@ export function MainContent({
     useFileUpload();
 
   // File selection hook
-  const { selection, handleSelect, handleSelectAll, clearSelection } =
-    useFileSelection(useMemo(() => files.map((f) => f.id), [files]));
+  const { selection, handleSelect, clearSelection } = useFileSelection(
+    useMemo(() => files.map((f) => f.id), [files]),
+  );
 
   // Fetch files from database
   const fetchFiles = useCallback(async () => {
     try {
       setIsLoading(true);
       const url = currentFolderId
-        ? `/api/files?folderId=${currentFolderId}`
-        : "/api/files";
+        ? `/api/files?folderId=${currentFolderId}&sortBy=${sortField}&sortOrder=${sortOrder}`
+        : `/api/files?sortBy=${sortField}&sortOrder=${sortOrder}`;
 
       const response = await fetch(url);
       const data = (await response.json()) as {
@@ -114,7 +118,7 @@ export function MainContent({
     } finally {
       setIsLoading(false);
     }
-  }, [currentFolderId]);
+  }, [currentFolderId, sortField, sortOrder]);
 
   // Load files on component mount
   useEffect(() => {
@@ -124,7 +128,6 @@ export function MainContent({
   // Fetch folders for current location
   const fetchFolders = useCallback(async () => {
     try {
-      setIsLoadingFolders(true);
       const url = currentFolderId
         ? `/api/folders?parentId=${currentFolderId}`
         : "/api/folders";
@@ -149,8 +152,6 @@ export function MainContent({
       }
     } catch (error) {
       console.error("Failed to fetch folders:", error);
-    } finally {
-      setIsLoadingFolders(false);
     }
   }, [currentFolderId]);
 
@@ -258,11 +259,6 @@ export function MainContent({
     },
     [handleFileSelect],
   );
-
-  // Format date
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
 
   // File actions handlers
   const handleFileDownload = useCallback(
@@ -489,11 +485,6 @@ export function MainContent({
     [sortField, sortOrder],
   );
 
-  const hasFiles = files.length > 0;
-  const hasFolders = folders.length > 0;
-  const hasContent = hasFiles || hasFolders;
-  const shouldShowUploadZone = !hasContent || isUploading;
-
   // Handle folder creation
   const handleCreateFolder = useCallback(
     async (folderName: string) => {
@@ -547,6 +538,41 @@ export function MainContent({
     [onFolderSelect, clearSelection],
   );
 
+  // Sort folders client-side
+  const sortedFolders = useMemo(() => {
+    return [...folders].sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortField) {
+        case "name":
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case "createdAt":
+          comparison =
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+        case "size":
+          // Folders don't have size, so sort by name as fallback
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case "category":
+          // Folders don't have category, so sort by name as fallback
+          comparison = a.name.localeCompare(b.name);
+          break;
+        default:
+          comparison =
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  }, [folders, sortField, sortOrder]);
+
+  const hasFiles = files.length > 0;
+  const hasFolders = folders.length > 0;
+  const hasContent = hasFiles || hasFolders;
+  const shouldShowUploadZone = !hasContent || isUploading;
+
   if (isLoading) {
     return (
       <main className="flex-1 overflow-auto">
@@ -592,6 +618,42 @@ export function MainContent({
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-gray-900">My Drive</h1>
           <div className="flex items-center gap-2">
+            {hasContent && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Sort by:{" "}
+                    {sortField === "name"
+                      ? "Name"
+                      : sortField === "size"
+                        ? "Size"
+                        : sortField === "category"
+                          ? "Type"
+                          : "Date"}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handleSort("name")}>
+                    Name{" "}
+                    {sortField === "name" && (sortOrder === "asc" ? "↑" : "↓")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSort("size")}>
+                    Size{" "}
+                    {sortField === "size" && (sortOrder === "asc" ? "↑" : "↓")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSort("category")}>
+                    Type{" "}
+                    {sortField === "category" &&
+                      (sortOrder === "asc" ? "↑" : "↓")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSort("createdAt")}>
+                    Date{" "}
+                    {sortField === "createdAt" &&
+                      (sortOrder === "asc" ? "↑" : "↓")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             <Button
               className="bg-blue-600 hover:bg-blue-700"
               onClick={() => setShowUploadModal(true)}
@@ -806,7 +868,7 @@ export function MainContent({
                 return viewMode === "grid" ? (
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
                     {/* Folders */}
-                    {folders.map((folder) => (
+                    {sortedFolders.map((folder) => (
                       <FolderCard
                         key={folder.id}
                         folder={folder}
@@ -833,7 +895,7 @@ export function MainContent({
                 ) : (
                   <div className="space-y-2">
                     {/* Folders */}
-                    {folders.map((folder) => (
+                    {sortedFolders.map((folder) => (
                       <FolderCard
                         key={folder.id}
                         folder={folder}

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Card, CardContent } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
 import { FileActionsMenu } from "./FileActionsMenu";
@@ -34,7 +33,6 @@ export function FileCard({
   actions,
   viewMode,
 }: FileCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
   const config =
     FILE_CATEGORY_CONFIG[file.category as keyof typeof FILE_CATEGORY_CONFIG] ||
     FILE_CATEGORY_CONFIG.text;
@@ -47,8 +45,6 @@ export function FileCard({
           className={`group cursor-pointer transition-all hover:shadow-md ${
             isSelected ? "bg-blue-50 ring-2 ring-blue-500" : ""
           }`}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
         >
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
@@ -99,8 +95,6 @@ export function FileCard({
         className={`group relative cursor-pointer transition-all hover:shadow-md ${
           isSelected ? "bg-blue-50 ring-2 ring-blue-500" : ""
         }`}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
       >
         <CardContent className="p-4">
           <div className="mb-3 flex items-start justify-between">

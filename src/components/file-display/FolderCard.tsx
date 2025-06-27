@@ -10,7 +10,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
-import { Folder, FolderOpen } from "lucide-react";
+import { Folder } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import {
   Tooltip,
@@ -48,8 +48,6 @@ export function FolderCard({
   actions,
   viewMode,
 }: FolderCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
-
   const handleClick = () => {
     actions.onOpen(folder.id);
   };
@@ -60,8 +58,6 @@ export function FolderCard({
         className={`group cursor-pointer transition-all hover:shadow-md ${
           isSelected ? "bg-blue-50 ring-2 ring-blue-500" : ""
         }`}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
         onClick={handleClick}
       >
         <CardContent className="p-4">
@@ -111,8 +107,6 @@ export function FolderCard({
       className={`group relative cursor-pointer transition-all hover:shadow-md ${
         isSelected ? "bg-blue-50 ring-2 ring-blue-500" : ""
       }`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       onClick={handleClick}
     >
       <CardContent className="p-4">
