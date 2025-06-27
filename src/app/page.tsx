@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppSidebar } from "~/components/app-sidebar";
 import { Header } from "~/components/header";
 import { MainContent } from "~/components/main-content";
 import { SidebarProvider, SidebarInset } from "~/components/ui/sidebar";
 
-export default function DrivePage() {
+function DrivePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
@@ -67,5 +67,13 @@ export default function DrivePage() {
         </SidebarInset>
       </div>
     </SidebarProvider>
+  );
+}
+
+export default function DrivePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DrivePageContent />
+    </Suspense>
   );
 }

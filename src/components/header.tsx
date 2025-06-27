@@ -1,19 +1,31 @@
 "use client";
 
-import { Bell, Grid3X3 } from "lucide-react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { Bell, Grid3X3, Search, X } from "lucide-react";
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "~/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
 import { SidebarTrigger } from "~/components/ui/sidebar";
 import { Badge } from "~/components/ui/badge";
 import { SearchBar } from "~/components/search-bar";
-import { useRouter } from "next/navigation";
 
 interface HeaderProps {
   onSearchNavigation?: (folderId: string | null) => void;
 }
 
 export function Header({ onSearchNavigation }: HeaderProps) {
-  const router = useRouter();
-
   const handleSearchResultSelect = (result: {
     id: string;
     name: string;
