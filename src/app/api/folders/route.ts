@@ -10,7 +10,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
 import { folders, users } from "~/server/db/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, asc } from "drizzle-orm";
 
 export async function POST(request: NextRequest) {
   try {
@@ -101,15 +101,27 @@ export async function GET(request: NextRequest) {
     // Parse query parameters
     const { searchParams } = new URL(request.url);
     const parentId = searchParams.get("parentId");
+    const allFolders = searchParams.get("all") === "true";
 
     // Get folders for the user
-    const userFolders = await db.query.folders.findMany({
-      where: and(
-        eq(folders.ownerId, userRecord.id),
-        parentId ? eq(folders.parentId, parentId) : isNull(folders.parentId),
-      ),
-      orderBy: (folders, { asc }) => [asc(folders.name)],
-    });
+    let userFolders;
+
+    if (allFolders) {
+      // Fetch all folders for the user (for sidebar tree)
+      userFolders = await db.query.folders.findMany({
+        where: eq(folders.ownerId, userRecord.id),
+        orderBy: (folders, { asc }) => [asc(folders.name)],
+      });
+    } else {
+      // Fetch folders filtered by parentId (for main content)
+      userFolders = await db.query.folders.findMany({
+        where: and(
+          eq(folders.ownerId, userRecord.id),
+          parentId ? eq(folders.parentId, parentId) : isNull(folders.parentId),
+        ),
+        orderBy: (folders, { asc }) => [asc(folders.name)],
+      });
+    }
 
     return NextResponse.json({
       success: true,

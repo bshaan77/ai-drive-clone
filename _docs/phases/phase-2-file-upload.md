@@ -90,3 +90,49 @@ Ready for search and sharing features
 5. Create a subfolder inside the first folder
 6. Navigate into the subfolder and verify breadcrumbs show full path
 7. Click any breadcrumb to navigate to that level
+
+## ✅ Step 3: Folder Tree in Sidebar
+
+**Status:** ✅ **COMPLETED**
+
+**What we implemented:**
+
+- [x] Create folder tree component for sidebar
+- [x] Show hierarchical folder structure
+- [x] Allow navigation from sidebar
+- [x] Highlight current folder
+- [x] Show folder counts (files/folders inside)
+
+**Key Features:**
+
+- **Hierarchical Display**: Shows nested folder structure with proper indentation
+- **Expand/Collapse**: Click chevron icons to expand or collapse folders
+- **Navigation**: Click any folder to navigate to it
+- **Current Folder Highlighting**: Current folder is highlighted in blue
+- **Auto-Expand Path**: Automatically expands the path to the current folder
+- **Loading States**: Shows skeleton loading while fetching folders
+- **Empty State**: Shows "No folders yet" when no folders exist
+
+**Component Structure:**
+
+- **FolderTree**: Main component that renders the hierarchical folder structure
+- **AppSidebar**: Updated to include the folder tree section
+- **MainContent**: Updated to accept folder navigation props
+- **Page Level**: Folder state is now managed at the page level for proper sharing
+
+**Technical Implementation:**
+
+- **Tree Building**: Converts flat folder list to hierarchical tree structure
+- **State Management**: Folder state lifted to page level for sidebar-main content sync
+- **Auto-Expansion**: Automatically expands folders in the current path
+- **Recursive Rendering**: Uses recursive component rendering for nested folders
+
+**Testing Steps:**
+
+1. Create multiple folders and subfolders
+2. Verify folder tree shows hierarchical structure
+3. Click folders in sidebar to navigate
+4. Verify current folder is highlighted
+5. Test expand/collapse functionality
+6. Navigate deep into folders and verify auto-expansion
+7. Verify breadcrumbs and sidebar stay in sync

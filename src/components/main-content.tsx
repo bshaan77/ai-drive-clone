@@ -36,7 +36,15 @@ import { CreateFolderDialog } from "~/components/file-display/CreateFolderDialog
 import { FolderCard } from "~/components/file-display/FolderCard";
 import { FileCard } from "~/components/file-display/FileCard";
 
-export function MainContent() {
+interface MainContentProps {
+  currentFolderId: string | null;
+  onFolderSelect: (folderId: string | null) => void;
+}
+
+export function MainContent({
+  currentFolderId,
+  onFolderSelect,
+}: MainContentProps) {
   const [files, setFiles] = useState<FileRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +64,6 @@ export function MainContent() {
     fileIds: string[];
   }>({ isOpen: false, fileIds: [] });
   const [createFolderDialog, setCreateFolderDialog] = useState(false);
-  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [folders, setFolders] = useState<
     Array<{
       id: string;
@@ -534,10 +541,10 @@ export function MainContent() {
   // Navigate to a specific folder
   const navigateToFolder = useCallback(
     (folderId: string | null) => {
-      setCurrentFolderId(folderId);
+      onFolderSelect(folderId);
       clearSelection(); // Clear selection when navigating
     },
-    [clearSelection],
+    [onFolderSelect, clearSelection],
   );
 
   if (isLoading) {
