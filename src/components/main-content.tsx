@@ -39,6 +39,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import { SearchBar } from "~/components/search-bar";
 
 interface MainContentProps {
   currentFolderId: string | null;
