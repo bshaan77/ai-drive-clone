@@ -104,8 +104,13 @@ export async function POST(
         })
         .returning();
 
+      // Get the base URL from the request headers
+      const host = request.headers.get("host");
+      const protocol = request.headers.get("x-forwarded-proto") ?? "http";
+      const baseUrl = `${protocol}://${host}`;
+
       publicLinkData = {
-        url: `${process.env.NEXT_PUBLIC_APP_URL}/shared/${token}`,
+        url: `${baseUrl}/shared/${token}`,
         token: publicLink[0]?.token,
       };
     }
@@ -178,7 +183,7 @@ export async function GET(
         ? {
             token: publicLink.token,
             permission: publicLink.permission,
-            url: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/shared/${publicLink.token}`,
+            url: `${request.headers.get("x-forwarded-proto") ?? "http"}://${request.headers.get("host")}/shared/${publicLink.token}`,
           }
         : null,
     });

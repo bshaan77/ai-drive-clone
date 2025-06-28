@@ -19,7 +19,6 @@ import {
   FolderPlus,
   Download,
   Share,
-  Edit,
   FolderOpen,
   Trash2,
 } from "lucide-react";
@@ -30,7 +29,6 @@ interface BulkContextMenuProps {
   onNewFolder?: () => void;
   onBulkDownload?: () => void;
   onBulkShare?: () => void;
-  onBulkRename?: () => void;
   onBulkMove?: () => void;
   onBulkDelete?: () => void;
   hasSelection?: boolean;
@@ -42,7 +40,6 @@ export function BulkContextMenu({
   onNewFolder,
   onBulkDownload,
   onBulkShare,
-  onBulkRename,
   onBulkMove,
   onBulkDelete,
   hasSelection = false,
@@ -70,10 +67,6 @@ export function BulkContextMenu({
             <ContextMenuItem onClick={onBulkShare}>
               <Share className="mr-2 h-4 w-4" />
               Share selected
-            </ContextMenuItem>
-            <ContextMenuItem onClick={onBulkRename}>
-              <Edit className="mr-2 h-4 w-4" />
-              Rename selected
             </ContextMenuItem>
             <ContextMenuItem onClick={onBulkMove}>
               <FolderOpen className="mr-2 h-4 w-4" />

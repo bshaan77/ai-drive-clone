@@ -29,17 +29,7 @@ import {
 import { Badge } from "~/components/ui/badge";
 import { Separator } from "~/components/ui/separator";
 import { Switch } from "~/components/ui/switch";
-import {
-  Share2,
-  User,
-  Link,
-  Eye,
-  Edit,
-  X,
-  Search,
-  Copy,
-  Check,
-} from "lucide-react";
+import { Share2, User, Link, Eye, Edit, X, Search } from "lucide-react";
 import { cn } from "~/lib/utils";
 
 interface User {
@@ -91,7 +81,6 @@ export function ShareDialog({
   const [publicPermission, setPublicPermission] = useState<"view" | "edit">(
     "view",
   );
-  const [copiedLink, setCopiedLink] = useState(false);
   const [generatedPublicLink, setGeneratedPublicLink] = useState<string | null>(
     null,
   );
@@ -189,7 +178,7 @@ export function ShareDialog({
         publicPermission,
       });
 
-      // If a public link was created, store it for copying
+      // If a public link was created, store it for copying and auto-copy it
       if (
         createPublicLink &&
         result &&
@@ -199,6 +188,16 @@ export function ShareDialog({
         const response = result as { publicLink?: { url: string } };
         if (response.publicLink?.url) {
           setGeneratedPublicLink(response.publicLink.url);
+          // Auto-copy the link to clipboard
+          try {
+            await navigator.clipboard.writeText(response.publicLink.url);
+            // Show success message
+            setError(null);
+            // Note: We could add a success state here if needed
+          } catch (copyError) {
+            console.error("Auto-copy failed:", copyError);
+            setError("Link created but failed to copy to clipboard");
+          }
         }
       }
 
@@ -226,28 +225,6 @@ export function ShareDialog({
     setPublicPermission("view");
     onClose();
   };
-
-  // Copy public link
-  const copyPublicLink = useCallback(async () => {
-    if (!createPublicLink) return;
-
-    try {
-      if (generatedPublicLink) {
-        // Copy the actual generated link
-        await navigator.clipboard.writeText(generatedPublicLink);
-        setCopiedLink(true);
-        setTimeout(() => setCopiedLink(false), 2000);
-      } else {
-        // If no link is generated yet, show a message
-        setError("Please create the public link first by clicking 'Share'");
-        setTimeout(() => setError(null), 3000);
-      }
-    } catch (err) {
-      console.error("Copy link error:", err);
-      setError("Failed to copy link to clipboard");
-      setTimeout(() => setError(null), 3000);
-    }
-  }, [createPublicLink, generatedPublicLink]);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -468,27 +445,6 @@ export function ShareDialog({
                       </SelectItem>
                     </SelectContent>
                   </Select>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={copyPublicLink}
-                    disabled={isSharing}
-                    className="h-8"
-                  >
-                    {copiedLink ? (
-                      <>
-                        <Check className="mr-1 h-3 w-3" />
-                        Copied
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="mr-1 h-3 w-3" />
-                        Copy link
-                      </>
-                    )}
-                  </Button>
                 </div>
               </div>
             )}
@@ -517,7 +473,11 @@ export function ShareDialog({
               }
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {isSharing ? "Sharing..." : "Share"}
+              {isSharing
+                ? "Sharing..."
+                : createPublicLink
+                  ? "Share & Copy Link"
+                  : "Share"}
             </Button>
           </DialogFooter>
         </form>

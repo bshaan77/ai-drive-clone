@@ -14,7 +14,7 @@ import {
 import { Button } from "~/components/ui/button";
 import { Progress } from "~/components/ui/progress";
 import { useFileUpload } from "~/hooks/use-file-upload";
-import { useFileSelection } from "~/hooks/useFileSelection";
+import { useItemSelection } from "~/hooks/useFileSelection";
 import { UploadModal } from "~/components/upload-modal";
 import { BulkActionsToolbar } from "~/components/file-display/BulkActionsToolbar";
 import { RenameDialog } from "~/components/file-display/RenameDialog";
@@ -62,17 +62,25 @@ export function MainContent({
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [renameDialog, setRenameDialog] = useState<{
     isOpen: boolean;
-    file: FileRecord | null;
-  }>({ isOpen: false, file: null });
+    item: FileRecord | { id: string; name: string } | null;
+    itemType: "file" | "folder";
+  }>({ isOpen: false, item: null, itemType: "file" });
   const [bulkDeleteDialog, setBulkDeleteDialog] = useState<{
     isOpen: boolean;
     fileIds: string[];
-  }>({ isOpen: false, fileIds: [] });
+    folderIds: string[];
+  }>({ isOpen: false, fileIds: [], folderIds: [] });
+  const [folderDeleteDialog, setFolderDeleteDialog] = useState<{
+    isOpen: boolean;
+    folderId: string | null;
+    folderName: string;
+  }>({ isOpen: false, folderId: null, folderName: "" });
   const [createFolderDialog, setCreateFolderDialog] = useState(false);
   const [shareDialog, setShareDialog] = useState<{
     isOpen: boolean;
-    file: FileRecord | null;
-  }>({ isOpen: false, file: null });
+    item: FileRecord | { id: string; name: string } | null;
+    itemType: "file" | "folder";
+  }>({ isOpen: false, item: null, itemType: "file" });
   const [folders, setFolders] = useState<
     Array<{
       id: string;
@@ -92,9 +100,15 @@ export function MainContent({
   const { uploadFiles, isUploading, uploadProgress, uploadError, clearError } =
     useFileUpload();
 
-  // File selection hook
-  const { selection, handleSelect, clearSelection } = useFileSelection(
+  // Item selection hook (files and folders)
+  const {
+    selection,
+    handleFileSelect: handleFileSelection,
+    handleFolderSelect,
+    clearSelection,
+  } = useItemSelection(
     useMemo(() => files.map((f) => f.id), [files]),
+    useMemo(() => folders.map((f) => f.id), [folders]),
   );
 
   // Fetch files from database
@@ -316,10 +330,20 @@ export function MainContent({
     (fileId: string) => {
       const file = files.find((f) => f.id === fileId);
       if (file) {
-        setShareDialog({ isOpen: true, file });
+        setShareDialog({ isOpen: true, item: file, itemType: "file" });
       }
     },
     [files],
+  );
+
+  const handleFolderShare = useCallback(
+    (folderId: string) => {
+      const folder = folders.find((f) => f.id === folderId);
+      if (folder) {
+        setShareDialog({ isOpen: true, item: folder, itemType: "folder" });
+      }
+    },
+    [folders],
   );
 
   const handleFileRename = useCallback(
@@ -422,65 +446,115 @@ export function MainContent({
   }, [selection.selectedFiles, clearSelection]);
 
   const handleBulkShare = useCallback(() => {
-    console.log("Bulk share:", Array.from(selection.selectedFiles));
-    // TODO: Implement bulk share
-  }, [selection.selectedFiles]);
+    const selectedFileIds = Array.from(selection.selectedFiles);
+    const selectedFolderIds = Array.from(selection.selectedFolders);
+
+    if (selectedFileIds.length === 0 && selectedFolderIds.length === 0) return;
+
+    // For now, just share the first selected item
+    if (selectedFileIds.length > 0) {
+      const firstFileId = selectedFileIds[0];
+      if (firstFileId) {
+        handleFileShare(firstFileId);
+      }
+    } else if (selectedFolderIds.length > 0) {
+      const firstFolderId = selectedFolderIds[0];
+      if (firstFolderId) {
+        handleFolderShare(firstFolderId);
+      }
+    }
+  }, [
+    selection.selectedFiles,
+    selection.selectedFolders,
+    handleFileShare,
+    handleFolderShare,
+  ]);
 
   const handleBulkMove = useCallback(() => {
     console.log("Bulk move:", Array.from(selection.selectedFiles));
     // TODO: Implement bulk move
   }, [selection.selectedFiles]);
 
-  const handleBulkRename = useCallback(() => {
-    const selectedFileIds = Array.from(selection.selectedFiles);
-    if (selectedFileIds.length === 0) return;
-
-    // For now, just rename the first selected file
-    const firstFileId = selectedFileIds[0];
-    const firstFile = files.find((f) => f.id === firstFileId);
-    if (firstFile) {
-      console.log("Bulk rename - renaming first file:", firstFile.name);
-      setRenameDialog({ isOpen: true, file: firstFile });
-    }
-  }, [selection.selectedFiles, files]);
-
   const handleBulkDelete = useCallback(async () => {
     const selectedFileIds = Array.from(selection.selectedFiles);
-    if (selectedFileIds.length === 0) return;
+    const selectedFolderIds = Array.from(selection.selectedFolders);
+
+    if (selectedFileIds.length === 0 && selectedFolderIds.length === 0) return;
 
     // Show confirmation dialog instead of deleting immediately
-    setBulkDeleteDialog({ isOpen: true, fileIds: selectedFileIds });
-  }, [selection.selectedFiles]);
+    setBulkDeleteDialog({
+      isOpen: true,
+      fileIds: selectedFileIds,
+      folderIds: selectedFolderIds,
+    });
+  }, [selection.selectedFiles, selection.selectedFolders]);
 
   const confirmBulkDelete = useCallback(async () => {
-    const { fileIds } = bulkDeleteDialog;
-    if (fileIds.length === 0) return;
+    const { fileIds, folderIds } = bulkDeleteDialog;
+    if (fileIds.length === 0 && folderIds.length === 0) return;
 
     try {
-      const response = await fetch("/api/files/bulk", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ fileIds }),
-      });
+      // Delete files if any
+      if (fileIds.length > 0) {
+        const fileResponse = await fetch("/api/files/bulk", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ fileIds }),
+        });
 
-      if (!response.ok) {
-        const error = (await response.json()) as { error?: string };
-        throw new Error(error.error ?? "Failed to delete files");
+        if (!fileResponse.ok) {
+          const error = (await fileResponse.json()) as { error?: string };
+          throw new Error(error.error ?? "Failed to delete files");
+        }
       }
 
-      // Refresh the file list
+      // Delete folders if any
+      if (folderIds.length > 0) {
+        const folderErrors: string[] = [];
+
+        for (const folderId of folderIds) {
+          try {
+            const folderResponse = await fetch(`/api/folders/${folderId}`, {
+              method: "DELETE",
+            });
+            if (!folderResponse.ok) {
+              const error = (await folderResponse.json()) as { error?: string };
+              const folder = folders.find((f) => f.id === folderId);
+              const folderName = folder?.name ?? folderId;
+              folderErrors.push(
+                `${folderName}: ${error.error ?? "Failed to delete"}`,
+              );
+            }
+          } catch (folderError) {
+            const folder = folders.find((f) => f.id === folderId);
+            const folderName = folder?.name ?? folderId;
+            folderErrors.push(`${folderName}: Network error`);
+          }
+        }
+
+        // If there were folder deletion errors, show them to the user
+        if (folderErrors.length > 0) {
+          const errorMessage = `Some folders could not be deleted:\n${folderErrors.join("\n")}\n\nTo delete folders with content, first move or delete the files and subfolders inside them.`;
+          setError(errorMessage);
+          // Don't clear selection or close dialog if there were errors
+          return;
+        }
+      }
+
+      // Refresh the file and folder lists
       await fetchFiles();
+      await fetchFolders();
       clearSelection();
-      setBulkDeleteDialog({ isOpen: false, fileIds: [] });
+      setBulkDeleteDialog({ isOpen: false, fileIds: [], folderIds: [] });
     } catch (error) {
       console.error("Bulk delete error:", error);
       setError(
-        error instanceof Error ? error.message : "Failed to delete files",
+        error instanceof Error ? error.message : "Failed to delete items",
       );
     }
-  }, [bulkDeleteDialog, fetchFiles, clearSelection]);
+  }, [bulkDeleteDialog, fetchFiles, fetchFolders, clearSelection, folders]);
 
   // Sort handler
   const handleSort = useCallback(
@@ -583,30 +657,34 @@ export function MainContent({
   const hasContent = hasFiles || hasFolders;
   const shouldShowUploadZone = !hasContent || isUploading;
 
-  // Handle file sharing
+  // Handle file/folder sharing
   const handleShare = useCallback(
     async (data: {
       users: Array<{ id: string; permission: "view" | "edit" }>;
       createPublicLink: boolean;
       publicPermission: "view" | "edit";
     }) => {
-      if (!shareDialog.file) return;
+      if (!shareDialog.item) return;
 
       try {
-        const response = await fetch(
-          `/api/files/${shareDialog.file.id}/share`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(data),
+        const endpoint =
+          shareDialog.itemType === "file"
+            ? `/api/files/${shareDialog.item.id}/share`
+            : `/api/folders/${shareDialog.item.id}/share`;
+
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
+          body: JSON.stringify(data),
+        });
 
         if (!response.ok) {
           const error = (await response.json()) as { error?: string };
-          throw new Error(error.error ?? "Failed to share file");
+          throw new Error(
+            error.error ?? `Failed to share ${shareDialog.itemType}`,
+          );
         }
 
         const result = (await response.json()) as {
@@ -615,8 +693,8 @@ export function MainContent({
           publicLink?: { url: string; token: string };
         };
 
-        console.log("File shared successfully");
-        setShareDialog({ isOpen: false, file: null });
+        console.log(`${shareDialog.itemType} shared successfully`);
+        setShareDialog({ isOpen: false, item: null, itemType: "file" });
 
         // Return the result for the ShareDialog to use
         return result;
@@ -625,8 +703,99 @@ export function MainContent({
         throw error;
       }
     },
-    [shareDialog.file],
+    [shareDialog.item, shareDialog.itemType],
   );
+
+  const handleFolderRename = useCallback(
+    async (folderId: string, newName: string) => {
+      console.log("Rename folder:", folderId, "to:", newName);
+      try {
+        const response = await fetch(`/api/folders/${folderId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name: newName }),
+        });
+
+        console.log("Folder rename response status:", response.status);
+
+        if (!response.ok) {
+          const error = (await response.json()) as { error?: string };
+          throw new Error(error.error ?? "Failed to rename folder");
+        }
+
+        console.log("Folder rename successful, refreshing folders");
+        // Refresh the folder list
+        await fetchFolders();
+      } catch (error) {
+        console.error("Folder rename error:", error);
+        throw error;
+      }
+    },
+    [fetchFolders],
+  );
+
+  const handleFolderDelete = useCallback(
+    async (folderId: string) => {
+      console.log("Delete folder:", folderId);
+      // Find the folder to get its name for the confirmation dialog
+      const folder = folders.find((f) => f.id === folderId);
+      if (folder) {
+        setFolderDeleteDialog({
+          isOpen: true,
+          folderId,
+          folderName: folder.name,
+        });
+      }
+    },
+    [folders],
+  );
+
+  const confirmFolderDelete = useCallback(async () => {
+    const { folderId } = folderDeleteDialog;
+    if (!folderId) return;
+
+    try {
+      const response = await fetch(`/api/folders/${folderId}`, {
+        method: "DELETE",
+      });
+
+      console.log("Folder delete response status:", response.status);
+
+      if (!response.ok) {
+        const error = (await response.json()) as { error?: string };
+        const errorMessage = error.error ?? "Failed to delete folder";
+
+        // Provide specific guidance for common errors
+        if (errorMessage.includes("contains files or subfolders")) {
+          setError(
+            `${errorMessage}\n\nTo delete this folder, first move or delete the files and subfolders inside it.`,
+          );
+        } else {
+          setError(errorMessage);
+        }
+
+        setFolderDeleteDialog({
+          isOpen: false,
+          folderId: null,
+          folderName: "",
+        });
+        return;
+      }
+
+      console.log("Folder delete successful, refreshing folders");
+      // Refresh the folder list
+      await fetchFolders();
+      setFolderDeleteDialog({ isOpen: false, folderId: null, folderName: "" });
+    } catch (error) {
+      console.error("Folder delete error:", error);
+      setError(
+        error instanceof Error ? error.message : "Failed to delete folder",
+      );
+      setFolderDeleteDialog({ isOpen: false, folderId: null, folderName: "" });
+    }
+  }, [folderDeleteDialog, fetchFolders]);
 
   if (isLoading) {
     return (
@@ -870,10 +1039,12 @@ export function MainContent({
             onNewFolder={() => setCreateFolderDialog(true)}
             onBulkDownload={handleBulkDownload}
             onBulkShare={handleBulkShare}
-            onBulkRename={handleBulkRename}
             onBulkMove={handleBulkMove}
             onBulkDelete={handleBulkDelete}
-            hasSelection={selection.selectedFiles.size > 0}
+            hasSelection={
+              selection.selectedFiles.size > 0 ||
+              selection.selectedFolders.size > 0
+            }
           >
             <div>
               {/* Bulk Actions Toolbar */}
@@ -883,7 +1054,6 @@ export function MainContent({
                 onBulkDownload={handleBulkDownload}
                 onBulkShare={handleBulkShare}
                 onBulkMove={handleBulkMove}
-                onBulkRename={handleBulkRename}
                 onBulkDelete={handleBulkDelete}
               />
 
@@ -897,7 +1067,11 @@ export function MainContent({
                   onDelete: handleFileDelete,
                   onOpenRenameDialog: (file: FileRecord) => {
                     console.log("Setting rename dialog for file:", file.name);
-                    setRenameDialog({ isOpen: true, file });
+                    setRenameDialog({
+                      isOpen: true,
+                      item: file,
+                      itemType: "file",
+                    });
                   },
                 };
 
@@ -906,14 +1080,20 @@ export function MainContent({
                     console.log("Opening folder:", folderId);
                     navigateToFolder(folderId);
                   },
+                  onShare: handleFolderShare,
                   onRename: (folderId: string, newName: string) => {
                     console.log("Rename folder:", folderId, "to:", newName);
-                    // TODO: Implement folder rename
+                    // Find the folder and open rename dialog
+                    const folder = folders.find((f) => f.id === folderId);
+                    if (folder) {
+                      setRenameDialog({
+                        isOpen: true,
+                        item: folder,
+                        itemType: "folder",
+                      });
+                    }
                   },
-                  onDelete: (folderId: string) => {
-                    console.log("Delete folder:", folderId);
-                    // TODO: Implement folder delete
-                  },
+                  onDelete: handleFolderDelete,
                   onMove: (folderId: string, newParentId: string) => {
                     console.log("Move folder:", folderId, "to:", newParentId);
                     // TODO: Implement folder move
@@ -927,10 +1107,8 @@ export function MainContent({
                       <FolderCard
                         key={folder.id}
                         folder={folder}
-                        isSelected={false} // TODO: Add folder selection
-                        onSelect={() => {
-                          // TODO: Implement folder selection
-                        }}
+                        isSelected={selection.selectedFolders.has(folder.id)}
+                        onSelect={handleFolderSelect}
                         actions={folderActions}
                         viewMode="grid"
                       />
@@ -941,7 +1119,7 @@ export function MainContent({
                         key={file.id}
                         file={file}
                         isSelected={selection.selectedFiles.has(file.id)}
-                        onSelect={handleSelect}
+                        onSelect={handleFileSelection}
                         actions={fileActions}
                         viewMode="grid"
                       />
@@ -954,10 +1132,8 @@ export function MainContent({
                       <FolderCard
                         key={folder.id}
                         folder={folder}
-                        isSelected={false} // TODO: Add folder selection
-                        onSelect={() => {
-                          // TODO: Implement folder selection
-                        }}
+                        isSelected={selection.selectedFolders.has(folder.id)}
+                        onSelect={handleFolderSelect}
                         actions={folderActions}
                         viewMode="list"
                       />
@@ -968,7 +1144,7 @@ export function MainContent({
                         key={file.id}
                         file={file}
                         isSelected={selection.selectedFiles.has(file.id)}
-                        onSelect={handleSelect}
+                        onSelect={handleFileSelection}
                         actions={fileActions}
                         viewMode="list"
                       />
@@ -1009,19 +1185,30 @@ export function MainContent({
       {/* Rename Dialog */}
       <RenameDialog
         isOpen={renameDialog.isOpen}
-        onClose={() => setRenameDialog({ isOpen: false, file: null })}
-        file={renameDialog.file}
-        onRename={handleFileRename}
+        onClose={() =>
+          setRenameDialog({ isOpen: false, item: null, itemType: "file" })
+        }
+        item={renameDialog.item}
+        itemType={renameDialog.itemType}
+        onRename={async (id: string, newName: string) => {
+          if (renameDialog.itemType === "file") {
+            await handleFileRename(id, newName);
+          } else {
+            await handleFolderRename(id, newName);
+          }
+        }}
       />
 
       {/* Share Dialog */}
       <ShareDialog
         isOpen={shareDialog.isOpen}
-        onClose={() => setShareDialog({ isOpen: false, file: null })}
+        onClose={() =>
+          setShareDialog({ isOpen: false, item: null, itemType: "file" })
+        }
         onShare={handleShare}
-        itemName={shareDialog.file?.name ?? ""}
-        itemType="file"
-        itemId={shareDialog.file?.id ?? ""}
+        itemName={shareDialog.item?.name ?? ""}
+        itemType={shareDialog.itemType}
+        itemId={shareDialog.item?.id ?? ""}
         currentShares={[]} // TODO: Load current shares
       />
 
@@ -1030,24 +1217,65 @@ export function MainContent({
         open={bulkDeleteDialog.isOpen}
         onOpenChange={(open: boolean) => {
           if (!open) {
-            setBulkDeleteDialog({ isOpen: false, fileIds: [] });
+            setBulkDeleteDialog({ isOpen: false, fileIds: [], folderIds: [] });
           }
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete files</AlertDialogTitle>
+            <AlertDialogTitle>Delete items</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete {bulkDeleteDialog.fileIds.length}{" "}
               file
-              {bulkDeleteDialog.fileIds.length > 1 ? "s" : ""}? This action
-              cannot be undone.
+              {bulkDeleteDialog.fileIds.length > 1 ? "s" : ""}
+              {bulkDeleteDialog.fileIds.length > 0 &&
+              bulkDeleteDialog.folderIds.length > 0
+                ? " and "
+                : ""}
+              {bulkDeleteDialog.folderIds.length > 0
+                ? `${bulkDeleteDialog.folderIds.length} folder${bulkDeleteDialog.folderIds.length > 1 ? "s" : ""}`
+                : ""}
+              ? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmBulkDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Folder Delete Confirmation Dialog */}
+      <AlertDialog
+        open={folderDeleteDialog.isOpen}
+        onOpenChange={(open: boolean) => {
+          if (!open) {
+            setFolderDeleteDialog({
+              isOpen: false,
+              folderId: null,
+              folderName: "",
+            });
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete folder</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the folder &quot;
+              {folderDeleteDialog.folderName}&quot;? This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmFolderDelete}
               className="bg-red-600 hover:bg-red-700"
             >
               Delete
