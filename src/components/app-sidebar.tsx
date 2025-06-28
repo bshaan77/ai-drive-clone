@@ -8,6 +8,7 @@ import {
   Users,
   HardDrive,
   Plus,
+  Menu,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -22,10 +23,13 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
+  SidebarTrigger,
 } from "~/components/ui/sidebar";
 import { Button } from "~/components/ui/button";
 import { Progress } from "~/components/ui/progress";
 import { FolderTree } from "~/components/folder-tree";
+import { SharedItemsTree } from "~/components/folder-tree";
+import { useIsMobile } from "~/hooks/use-mobile";
 
 interface AppSidebarProps {
   currentFolderId: string | null;
@@ -41,7 +45,7 @@ const navigationItems = [
   },
   {
     title: "Shared with me",
-    url: "/shared",
+    url: "/shared-with-me",
     icon: Users,
   },
   {
@@ -68,12 +72,13 @@ export function AppSidebar({
   const storageUsed = 8.2; // GB
   const storageTotal = 15; // GB
   const storagePercentage = (storageUsed / storageTotal) * 100;
+  const isMobile = useIsMobile();
 
   return (
-    <Sidebar className="border-r border-gray-200">
+    <Sidebar className="border-r border-gray-200 transition-all duration-300 ease-in-out">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 shadow-sm">
             <HardDrive className="h-4 w-4 text-white" />
           </div>
           <span className="text-lg font-semibold text-gray-900">Drive</span>
@@ -84,7 +89,7 @@ export function AppSidebar({
         <SidebarGroup>
           <SidebarGroupContent>
             <div className="mb-4 px-2">
-              <Button className="w-full justify-start gap-3 bg-blue-600 text-white shadow-sm hover:bg-blue-700">
+              <Button className="w-full justify-start gap-3 bg-blue-600 text-white shadow-sm transition-all duration-200 hover:bg-blue-700 hover:shadow-md">
                 <Plus className="h-4 w-4" />
                 New
               </Button>
@@ -95,10 +100,10 @@ export function AppSidebar({
                   <SidebarMenuButton
                     asChild
                     isActive={item.isActive}
-                    className="h-10 px-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900 data-[active=true]:bg-blue-50 data-[active=true]:font-medium data-[active=true]:text-blue-700"
+                    className="h-10 px-3 text-gray-700 transition-all duration-200 hover:bg-gray-100 hover:text-gray-900 data-[active=true]:bg-blue-50 data-[active=true]:font-medium data-[active=true]:text-blue-700"
                   >
                     <Link href={item.url} className="flex items-center gap-3">
-                      <item.icon className="h-4 w-4" />
+                      <item.icon className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
                       <span className="text-sm">{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
@@ -123,6 +128,19 @@ export function AppSidebar({
             </div>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Shared Items */}
+        <SidebarSeparator className="my-4" />
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <div className="px-2 py-2">
+              <h3 className="mb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                Shared
+              </h3>
+              <SharedItemsTree />
+            </div>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="p-4">
@@ -134,11 +152,14 @@ export function AppSidebar({
               {storageUsed} GB of {storageTotal} GB used
             </span>
           </div>
-          <Progress value={storagePercentage} className="h-2" />
+          <Progress
+            value={storagePercentage}
+            className="h-2 transition-all duration-300"
+          />
           <Button
             variant="outline"
             size="sm"
-            className="w-full border-blue-200 bg-transparent text-blue-600 hover:bg-blue-50"
+            className="w-full border-blue-200 bg-transparent text-blue-600 transition-all duration-200 hover:border-blue-300 hover:bg-blue-50"
           >
             Get more storage
           </Button>

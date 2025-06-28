@@ -2,7 +2,7 @@
 
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
-import { Download, Share, Trash2, FolderOpen, X } from "lucide-react";
+import { Download, Share, Trash2, FolderOpen, X, Edit } from "lucide-react";
 
 interface ItemSelection {
   selectedFiles: Set<string>;

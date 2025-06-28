@@ -5,3 +5,4 @@
  */
 
 export { FolderTree } from "./FolderTree";
+export { SharedItemsTree } from "./SharedItemsTree";

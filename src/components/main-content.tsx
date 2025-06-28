@@ -15,6 +15,7 @@ import { Button } from "~/components/ui/button";
 import { Progress } from "~/components/ui/progress";
 import { useFileUpload } from "~/hooks/use-file-upload";
 import { useItemSelection } from "~/hooks/useFileSelection";
+import { useKeyboardShortcuts } from "~/hooks/useKeyboardShortcuts";
 import { UploadModal } from "~/components/upload-modal";
 import { BulkActionsToolbar } from "~/components/file-display/BulkActionsToolbar";
 import { RenameDialog } from "~/components/file-display/RenameDialog";
@@ -34,6 +35,8 @@ import type { FileRecord } from "~/types/file";
 import { CreateFolderDialog } from "~/components/file-display/CreateFolderDialog";
 import { FolderCard } from "~/components/file-display/FolderCard";
 import { FileCard } from "~/components/file-display/FileCard";
+import { FilePreview } from "~/components/file-display/FilePreview";
+import { FileDetailsPanel } from "~/components/file-display/FileDetailsPanel";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -81,6 +84,11 @@ export function MainContent({
     item: FileRecord | { id: string; name: string } | null;
     itemType: "file" | "folder";
   }>({ isOpen: false, item: null, itemType: "file" });
+  const [filePreview, setFilePreview] = useState<{
+    isOpen: boolean;
+    file: FileRecord | null;
+  }>({ isOpen: false, file: null });
+  const [fileDetailsPanel, setFileDetailsPanel] = useState(false);
   const [folders, setFolders] = useState<
     Array<{
       id: string;
@@ -106,10 +114,59 @@ export function MainContent({
     handleFileSelect: handleFileSelection,
     handleFolderSelect,
     clearSelection,
+    handleSelectAll,
   } = useItemSelection(
     useMemo(() => files.map((f) => f.id), [files]),
     useMemo(() => folders.map((f) => f.id), [folders]),
   );
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onUpload: () => setShowUploadModal(true),
+    onNewFolder: () => setCreateFolderDialog(true),
+    onSelectAll: () => handleSelectAll(true),
+    onClearSelection: clearSelection,
+    onSearch: () => {
+      // Focus the search input in the header
+      const searchInput = document.querySelector(
+        'input[placeholder*="Search"]',
+      );
+      if (searchInput instanceof HTMLInputElement) {
+        searchInput.focus();
+      }
+    },
+    onDelete: () => {
+      const hasSelection =
+        selection.selectedFiles.size > 0 || selection.selectedFolders.size > 0;
+      if (hasSelection) {
+        void handleBulkDelete();
+      }
+    },
+    onRename: () => {
+      // Rename the first selected item
+      const firstSelectedFile = Array.from(selection.selectedFiles)[0];
+      const firstSelectedFolder = Array.from(selection.selectedFolders)[0];
+
+      if (firstSelectedFile) {
+        const file = files.find((f) => f.id === firstSelectedFile);
+        if (file) {
+          setRenameDialog({ isOpen: true, item: file, itemType: "file" });
+        }
+      } else if (firstSelectedFolder) {
+        const folder = folders.find((f) => f.id === firstSelectedFolder);
+        if (folder) {
+          setRenameDialog({ isOpen: true, item: folder, itemType: "folder" });
+        }
+      }
+    },
+    onDetailsPanel: () => {
+      const hasSelection =
+        selection.selectedFiles.size > 0 || selection.selectedFolders.size > 0;
+      if (hasSelection) {
+        setFileDetailsPanel(!fileDetailsPanel);
+      }
+    },
+  });
 
   // Fetch files from database
   const fetchFiles = useCallback(async () => {
@@ -319,6 +376,19 @@ export function MainContent({
           link.download = file.originalName;
           link.click();
         }
+      } else {
+        console.error("File not found:", fileId);
+      }
+    },
+    [files],
+  );
+
+  const handleFilePreview = useCallback(
+    (fileId: string) => {
+      console.log("Preview called for file:", fileId);
+      const file = files.find((f) => f.id === fileId);
+      if (file) {
+        setFilePreview({ isOpen: true, file });
       } else {
         console.error("File not found:", fileId);
       }
@@ -803,7 +873,7 @@ export function MainContent({
         <div className="flex h-full items-center justify-center">
           <div className="text-center">
             <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
-            <p className="text-gray-600">Loading your files...</p>
+            <p className="animate-pulse text-gray-600">Loading your files...</p>
           </div>
         </div>
       </main>
@@ -946,10 +1016,10 @@ export function MainContent({
             onNewFolder={() => setCreateFolderDialog(true)}
           >
             <div
-              className={`relative rounded-lg border-2 border-dashed transition-all duration-200 ${
+              className={`relative rounded-lg border-2 border-dashed transition-all duration-300 ease-in-out ${
                 isDragOver
-                  ? "border-blue-400 bg-blue-50"
-                  : "border-gray-300 hover:border-gray-400"
+                  ? "scale-105 border-blue-400 bg-blue-50 shadow-lg"
+                  : "border-gray-300 hover:border-gray-400 hover:bg-gray-50"
               } ${isUploading ? "bg-gray-50" : "bg-white"}`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -962,7 +1032,7 @@ export function MainContent({
                       <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
                     </div>
                     <div className="space-y-2">
-                      <p className="text-lg font-medium text-gray-900">
+                      <p className="animate-pulse text-lg font-medium text-gray-900">
                         Uploading files...
                       </p>
                       {Object.entries(uploadProgress).map(
@@ -974,7 +1044,10 @@ export function MainContent({
                               </span>
                               <span>{Math.round(progress)}%</span>
                             </div>
-                            <Progress value={progress} className="h-2" />
+                            <Progress
+                              value={progress}
+                              className="h-2 transition-all duration-300"
+                            />
                           </div>
                         ),
                       )}
@@ -983,12 +1056,12 @@ export function MainContent({
                 ) : (
                   <div className="space-y-4">
                     <div className="flex justify-center">
-                      <div className="rounded-full bg-blue-50 p-4">
+                      <div className="rounded-full bg-blue-50 p-4 transition-all duration-300 hover:scale-110">
                         <Upload className="h-8 w-8 text-blue-600" />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <h3 className="text-lg font-medium text-gray-900">
+                      <h3 className="text-lg font-medium text-gray-900 transition-colors duration-200">
                         {isDragOver
                           ? "Drop files here"
                           : "Upload files to Drive"}
@@ -1002,7 +1075,7 @@ export function MainContent({
                     </div>
                     <div className="flex flex-col justify-center gap-3 sm:flex-row">
                       <Button
-                        className="bg-blue-600 hover:bg-blue-700"
+                        className="bg-blue-600 transition-all duration-200 hover:bg-blue-700 hover:shadow-md"
                         onClick={() =>
                           document.getElementById("file-input")?.click()
                         }
@@ -1010,7 +1083,10 @@ export function MainContent({
                         <Plus className="mr-2 h-4 w-4" />
                         Select files
                       </Button>
-                      <Button variant="outline">
+                      <Button
+                        variant="outline"
+                        className="transition-all duration-200 hover:shadow-sm"
+                      >
                         <Folder className="mr-2 h-4 w-4" />
                         New folder
                       </Button>
@@ -1061,6 +1137,7 @@ export function MainContent({
               {(() => {
                 const fileActions = {
                   onDownload: handleFileDownload,
+                  onPreview: handleFilePreview,
                   onShare: handleFileShare,
                   onRename: handleFileRename,
                   onMove: handleFileMove,
@@ -1101,7 +1178,7 @@ export function MainContent({
                 };
 
                 return viewMode === "grid" ? (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                  <div className="grid grid-cols-1 gap-4 transition-all duration-300 ease-in-out sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
                     {/* Folders */}
                     {sortedFolders.map((folder) => (
                       <FolderCard
@@ -1126,7 +1203,7 @@ export function MainContent({
                     ))}
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 transition-all duration-300 ease-in-out">
                     {/* Folders */}
                     {sortedFolders.map((folder) => (
                       <FolderCard
@@ -1283,6 +1360,45 @@ export function MainContent({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* File Preview */}
+      {filePreview.file && (
+        <FilePreview
+          file={filePreview.file}
+          isOpen={filePreview.isOpen}
+          onClose={() => setFilePreview({ isOpen: false, file: null })}
+          onDownload={() => {
+            if (filePreview.file) {
+              handleFileDownload(filePreview.file.id);
+            }
+          }}
+        />
+      )}
+
+      {/* File Details Panel */}
+      <FileDetailsPanel
+        selectedFiles={selection.selectedFiles}
+        selectedFolders={selection.selectedFolders}
+        files={files}
+        folders={folders}
+        isOpen={fileDetailsPanel}
+        onClose={() => setFileDetailsPanel(false)}
+        onDownload={handleFileDownload}
+        onShare={(fileId) => {
+          const file = files.find((f) => f.id === fileId);
+          if (file) {
+            setShareDialog({ isOpen: true, item: file, itemType: "file" });
+          }
+        }}
+        onRename={(fileId, newName) => {
+          const file = files.find((f) => f.id === fileId);
+          if (file) {
+            void handleFileRename(fileId, newName);
+          }
+        }}
+        onDelete={handleFileDelete}
+        onPreview={handleFilePreview}
+      />
     </main>
   );
 }
