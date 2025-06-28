@@ -3,6 +3,8 @@
  *
  * This schema defines the database structure for our file management system,
  * including users, files, folders, and sharing capabilities.
+ *
+ * IMPORTANT: This schema matches the actual database structure created by Drizzle.
  */
 
 import { sql } from "drizzle-orm";
@@ -32,7 +34,7 @@ export const users = createTable(
       .timestamp({ withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+    updatedAt: d.timestamp({ withTimezone: true }),
   }),
   (t) => [index("clerk_id_idx").on(t.clerkId), index("email_idx").on(t.email)],
 );
@@ -47,16 +49,13 @@ export const folders = createTable(
     name: d.varchar({ length: 255 }).notNull(),
     description: d.text(),
     parentId: d.uuid(), // Self-referencing for nested folders
-    ownerId: d
-      .uuid()
-      .notNull()
-      .references(() => users.id),
+    ownerId: d.uuid().notNull(), // Reference to users table
     isPublic: d.boolean().default(false),
     createdAt: d
       .timestamp({ withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+    updatedAt: d.timestamp({ withTimezone: true }),
   }),
   (t) => [
     index("folder_owner_id_idx").on(t.ownerId),
@@ -78,17 +77,14 @@ export const files = createTable(
     size: d.integer().notNull(), // File size in bytes
     blobUrl: d.varchar({ length: 500 }).notNull(), // Vercel Blob URL
     folderId: d.uuid(), // Reference to folders table
-    ownerId: d
-      .uuid()
-      .notNull()
-      .references(() => users.id),
+    ownerId: d.uuid().notNull(), // Reference to users table
     isPublic: d.boolean().default(false),
     metadata: d.jsonb(), // Additional file metadata (dimensions, duration, etc.)
     createdAt: d
       .timestamp({ withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+    updatedAt: d.timestamp({ withTimezone: true }),
   }),
   (t) => [
     index("file_owner_id_idx").on(t.ownerId),
@@ -110,14 +106,8 @@ export const shares = createTable(
     id: d.uuid().primaryKey().defaultRandom(),
     fileId: d.uuid(), // Reference to files table (mutually exclusive with folderId)
     folderId: d.uuid(), // Reference to folders table (mutually exclusive with fileId)
-    ownerId: d
-      .uuid()
-      .notNull()
-      .references(() => users.id), // User who owns the file/folder
-    sharedWithId: d
-      .uuid()
-      .notNull()
-      .references(() => users.id), // User who receives the share
+    ownerId: d.uuid().notNull(), // User who owns the file/folder
+    sharedWithId: d.uuid().notNull(), // User who receives the share
     permission: d.varchar({ length: 20 }).notNull().default("view"), // 'view' or 'edit'
     expiresAt: d.timestamp({ withTimezone: true }), // Optional expiration
     createdAt: d
@@ -130,8 +120,6 @@ export const shares = createTable(
     index("share_folder_id_idx").on(t.folderId),
     index("share_owner_id_idx").on(t.ownerId),
     index("share_shared_with_id_idx").on(t.sharedWithId),
-    // Ensure either fileId or folderId is set, but not both
-    index("share_resource_idx").on(t.fileId, t.folderId),
   ],
 );
 
@@ -148,10 +136,7 @@ export const publicLinks = createTable(
     token: d.varchar({ length: 100 }).notNull().unique(), // Unique token for the link
     fileId: d.uuid(), // Reference to files table (mutually exclusive with folderId)
     folderId: d.uuid(), // Reference to folders table (mutually exclusive with fileId)
-    ownerId: d
-      .uuid()
-      .notNull()
-      .references(() => users.id), // User who owns the file/folder
+    ownerId: d.uuid().notNull(), // User who owns the file/folder
     permission: d.varchar({ length: 20 }).notNull().default("view"), // 'view' or 'edit'
     expiresAt: d.timestamp({ withTimezone: true }), // Optional expiration
     downloadCount: d.integer().default(0), // Track usage
@@ -165,8 +150,6 @@ export const publicLinks = createTable(
     index("public_link_file_id_idx").on(t.fileId),
     index("public_link_folder_id_idx").on(t.folderId),
     index("public_link_owner_id_idx").on(t.ownerId),
-    // Ensure either fileId or folderId is set, but not both
-    index("public_link_resource_idx").on(t.fileId, t.folderId),
   ],
 );
 

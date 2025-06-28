@@ -19,6 +19,7 @@ import { UploadModal } from "~/components/upload-modal";
 import { BulkActionsToolbar } from "~/components/file-display/BulkActionsToolbar";
 import { RenameDialog } from "~/components/file-display/RenameDialog";
 import { BulkContextMenu } from "~/components/file-display/BulkContextMenu";
+import { ShareDialog } from "~/components/file-display/ShareDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -68,6 +69,10 @@ export function MainContent({
     fileIds: string[];
   }>({ isOpen: false, fileIds: [] });
   const [createFolderDialog, setCreateFolderDialog] = useState(false);
+  const [shareDialog, setShareDialog] = useState<{
+    isOpen: boolean;
+    file: FileRecord | null;
+  }>({ isOpen: false, file: null });
   const [folders, setFolders] = useState<
     Array<{
       id: string;
@@ -307,10 +312,15 @@ export function MainContent({
     [files],
   );
 
-  const handleFileShare = useCallback((fileId: string) => {
-    console.log("Share file:", fileId);
-    // TODO: Implement file sharing
-  }, []);
+  const handleFileShare = useCallback(
+    (fileId: string) => {
+      const file = files.find((f) => f.id === fileId);
+      if (file) {
+        setShareDialog({ isOpen: true, file });
+      }
+    },
+    [files],
+  );
 
   const handleFileRename = useCallback(
     async (fileId: string, newName: string) => {
@@ -572,6 +582,51 @@ export function MainContent({
   const hasFolders = folders.length > 0;
   const hasContent = hasFiles || hasFolders;
   const shouldShowUploadZone = !hasContent || isUploading;
+
+  // Handle file sharing
+  const handleShare = useCallback(
+    async (data: {
+      users: Array<{ id: string; permission: "view" | "edit" }>;
+      createPublicLink: boolean;
+      publicPermission: "view" | "edit";
+    }) => {
+      if (!shareDialog.file) return;
+
+      try {
+        const response = await fetch(
+          `/api/files/${shareDialog.file.id}/share`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+          },
+        );
+
+        if (!response.ok) {
+          const error = (await response.json()) as { error?: string };
+          throw new Error(error.error ?? "Failed to share file");
+        }
+
+        const result = (await response.json()) as {
+          success: boolean;
+          message: string;
+          publicLink?: { url: string; token: string };
+        };
+
+        console.log("File shared successfully");
+        setShareDialog({ isOpen: false, file: null });
+
+        // Return the result for the ShareDialog to use
+        return result;
+      } catch (error) {
+        console.error("Share error:", error);
+        throw error;
+      }
+    },
+    [shareDialog.file],
+  );
 
   if (isLoading) {
     return (
@@ -957,6 +1012,17 @@ export function MainContent({
         onClose={() => setRenameDialog({ isOpen: false, file: null })}
         file={renameDialog.file}
         onRename={handleFileRename}
+      />
+
+      {/* Share Dialog */}
+      <ShareDialog
+        isOpen={shareDialog.isOpen}
+        onClose={() => setShareDialog({ isOpen: false, file: null })}
+        onShare={handleShare}
+        itemName={shareDialog.file?.name ?? ""}
+        itemType="file"
+        itemId={shareDialog.file?.id ?? ""}
+        currentShares={[]} // TODO: Load current shares
       />
 
       {/* Bulk Delete Confirmation Dialog */}
