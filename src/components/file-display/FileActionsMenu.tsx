@@ -27,11 +27,13 @@ import {
   FolderOpen,
   Trash2,
   Copy,
+  Eye,
 } from "lucide-react";
 import type { FileRecord } from "~/types/file";
 
 interface FileActions {
   onDownload: (fileId: string) => void;
+  onPreview: (fileId: string) => void;
   onShare: (fileId: string) => void;
   onRename: (fileId: string, newName: string) => void;
   onMove: (fileId: string, folderId: string) => void;
@@ -71,6 +73,10 @@ export function FileActionsMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem onClick={() => actions.onPreview(file.id)}>
+            <Eye className="mr-2 h-4 w-4" />
+            Preview
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => actions.onDownload(file.id)}>
             <Download className="mr-2 h-4 w-4" />
             Download

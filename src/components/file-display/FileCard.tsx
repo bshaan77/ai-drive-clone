@@ -38,6 +38,10 @@ export function FileCard({
     FILE_CATEGORY_CONFIG.text;
   const IconComponent = config.icon;
 
+  const handleDoubleClick = () => {
+    actions.onPreview?.(file.id);
+  };
+
   if (viewMode === "list") {
     return (
       <FileContextMenu file={file} actions={actions}>
@@ -45,6 +49,7 @@ export function FileCard({
           className={`group cursor-pointer transition-all hover:shadow-md ${
             isSelected ? "bg-blue-50 ring-2 ring-blue-500" : ""
           }`}
+          onDoubleClick={handleDoubleClick}
         >
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
@@ -95,6 +100,7 @@ export function FileCard({
         className={`group relative cursor-pointer transition-all hover:shadow-md ${
           isSelected ? "bg-blue-50 ring-2 ring-blue-500" : ""
         }`}
+        onDoubleClick={handleDoubleClick}
       >
         <CardContent className="p-4">
           <div className="mb-3 flex items-start justify-between">

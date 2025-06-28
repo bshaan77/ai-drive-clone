@@ -1,0 +1,86 @@
+// Google Drive Clone Database Schema
+// Generated from Drizzle introspection
+
+Table drive_tutorial_ishaan_user {
+  id uuid [pk]
+  clerkId varchar(255) [unique]
+  email varchar(255)
+  firstName varchar(100)
+  lastName varchar(100)
+  avatarUrl varchar(500)
+  createdAt timestamp
+  updatedAt timestamp
+  
+  Note: 'Stores user information from Clerk with minimal data duplication'
+}
+
+Table drive_tutorial_ishaan_folder {
+  id uuid [pk]
+  name varchar(255)
+  description text
+  parentId uuid [note: 'Self-referencing for nested folders']
+  ownerId uuid [ref: > drive_tutorial_ishaan_user.id]
+  isPublic boolean [default: false]
+  createdAt timestamp
+  updatedAt timestamp
+  
+  Note: 'Stores folder information with hierarchical structure'
+}
+
+Table drive_tutorial_ishaan_file {
+  id uuid [pk]
+  name varchar(255)
+  originalName varchar(255)
+  mimeType varchar(100)
+  size integer [note: 'File size in bytes']
+  blobUrl varchar(500) [note: 'Vercel Blob URL']
+  folderId uuid [ref: > drive_tutorial_ishaan_folder.id]
+  ownerId uuid [ref: > drive_tutorial_ishaan_user.id]
+  isPublic boolean [default: false]
+  metadata jsonb [note: 'Additional file metadata']
+  createdAt timestamp
+  updatedAt timestamp
+  
+  Note: 'Stores file metadata and references to Vercel Blob storage'
+}
+
+Table drive_tutorial_ishaan_share {
+  id uuid [pk]
+  fileId uuid [ref: > drive_tutorial_ishaan_file.id, note: 'Mutually exclusive with folderId']
+  folderId uuid [ref: > drive_tutorial_ishaan_folder.id, note: 'Mutually exclusive with fileId']
+  ownerId uuid [ref: > drive_tutorial_ishaan_user.id, note: 'User who owns the file/folder']
+  sharedWithId uuid [ref: > drive_tutorial_ishaan_user.id, note: 'User who receives the share']
+  permission varchar(20) [default: 'view', note: 'view or edit']
+  expiresAt timestamp [note: 'Optional expiration']
+  createdAt timestamp
+  
+  Note: 'Stores file/folder sharing information between users'
+}
+
+Table drive_tutorial_ishaan_public_link {
+  id uuid [pk]
+  token varchar(100) [unique, note: 'Unique token for the link']
+  fileId uuid [ref: > drive_tutorial_ishaan_file.id, note: 'Mutually exclusive with folderId']
+  folderId uuid [ref: > drive_tutorial_ishaan_folder.id, note: 'Mutually exclusive with fileId']
+  ownerId uuid [ref: > drive_tutorial_ishaan_user.id, note: 'User who owns the file/folder']
+  permission varchar(20) [default: 'view', note: 'view or edit']
+  expiresAt timestamp [note: 'Optional expiration']
+  downloadCount integer [default: 0, note: 'Track usage']
+  createdAt timestamp
+  
+  Note: 'Stores public sharing links for files and folders'
+}
+
+Table drive_tutorial_ishaan_file_version {
+  id uuid [pk]
+  fileId uuid [ref: > drive_tutorial_ishaan_file.id]
+  version integer [note: 'Version number']
+  blobUrl varchar(500)
+  size integer
+  createdAt timestamp
+  
+  Note: 'Stores file version history for tracking changes'
+}
+
+// Self-referencing relationship for nested folders
+Ref: drive_tutorial_ishaan_folder.parentId > drive_tutorial_ishaan_folder.id 

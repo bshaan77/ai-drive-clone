@@ -2,14 +2,16 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 
-interface FileSelection {
+interface ItemSelection {
   selectedFiles: Set<string>;
+  selectedFolders: Set<string>;
   isAllSelected: boolean;
 }
 
-export function useFileSelection(fileIds: string[]) {
-  const [selection, setSelection] = useState<FileSelection>({
+export function useItemSelection(fileIds: string[], folderIds: string[]) {
+  const [selection, setSelection] = useState<ItemSelection>({
     selectedFiles: new Set<string>(),
+    selectedFolders: new Set<string>(),
     isAllSelected: false,
   });
 
@@ -18,11 +20,12 @@ export function useFileSelection(fileIds: string[]) {
 
   // Update isAllSelected when selection changes
   useEffect(() => {
-    const selectedCount = selection.selectedFiles.size;
+    const totalItems = fileIds.length + folderIds.length;
+    const selectedCount =
+      selection.selectedFiles.size + selection.selectedFolders.size;
     selectedCountRef.current = selectedCount;
 
-    const isAllSelected =
-      fileIds.length > 0 && selectedCount === fileIds.length;
+    const isAllSelected = totalItems > 0 && selectedCount === totalItems;
 
     setSelection((prev) => {
       // Only update if the isAllSelected value actually changed
@@ -31,9 +34,14 @@ export function useFileSelection(fileIds: string[]) {
       }
       return prev;
     });
-  }, [fileIds.length, selection.selectedFiles.size]);
+  }, [
+    fileIds.length,
+    folderIds.length,
+    selection.selectedFiles.size,
+    selection.selectedFolders.size,
+  ]);
 
-  const handleSelect = useCallback((fileId: string, selected: boolean) => {
+  const handleFileSelect = useCallback((fileId: string, selected: boolean) => {
     setSelection((prev) => {
       const newSelectedFiles = new Set<string>(prev.selectedFiles);
       if (selected) {
@@ -48,27 +56,50 @@ export function useFileSelection(fileIds: string[]) {
     });
   }, []);
 
+  const handleFolderSelect = useCallback(
+    (folderId: string, selected: boolean) => {
+      setSelection((prev) => {
+        const newSelectedFolders = new Set<string>(prev.selectedFolders);
+        if (selected) {
+          newSelectedFolders.add(folderId);
+        } else {
+          newSelectedFolders.delete(folderId);
+        }
+        return {
+          ...prev,
+          selectedFolders: newSelectedFolders,
+        };
+      });
+    },
+    [],
+  );
+
   const handleSelectAll = useCallback(
     (selected: boolean) => {
       setSelection((prev) => ({
         ...prev,
         selectedFiles: selected ? new Set<string>(fileIds) : new Set<string>(),
+        selectedFolders: selected
+          ? new Set<string>(folderIds)
+          : new Set<string>(),
         isAllSelected: selected,
       }));
     },
-    [fileIds],
+    [fileIds, folderIds],
   );
 
   const clearSelection = useCallback(() => {
     setSelection({
       selectedFiles: new Set<string>(),
+      selectedFolders: new Set<string>(),
       isAllSelected: false,
     });
   }, []);
 
   return {
     selection,
-    handleSelect,
+    handleFileSelect,
+    handleFolderSelect,
     handleSelectAll,
     clearSelection,
   };

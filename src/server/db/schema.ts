@@ -3,6 +3,8 @@
  *
  * This schema defines the database structure for our file management system,
  * including users, files, folders, and sharing capabilities.
+ *
+ * IMPORTANT: This schema matches the actual database structure created by Drizzle.
  */
 
 import { sql } from "drizzle-orm";
@@ -32,7 +34,7 @@ export const users = createTable(
       .timestamp({ withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+    updatedAt: d.timestamp({ withTimezone: true }),
   }),
   (t) => [index("clerk_id_idx").on(t.clerkId), index("email_idx").on(t.email)],
 );
@@ -47,16 +49,13 @@ export const folders = createTable(
     name: d.varchar({ length: 255 }).notNull(),
     description: d.text(),
     parentId: d.uuid(), // Self-referencing for nested folders
-    ownerId: d
-      .uuid()
-      .notNull()
-      .references(() => users.id),
+    ownerId: d.uuid().notNull(), // Reference to users table
     isPublic: d.boolean().default(false),
     createdAt: d
       .timestamp({ withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+    updatedAt: d.timestamp({ withTimezone: true }),
   }),
   (t) => [
     index("folder_owner_id_idx").on(t.ownerId),
@@ -78,17 +77,14 @@ export const files = createTable(
     size: d.integer().notNull(), // File size in bytes
     blobUrl: d.varchar({ length: 500 }).notNull(), // Vercel Blob URL
     folderId: d.uuid(), // Reference to folders table
-    ownerId: d
-      .uuid()
-      .notNull()
-      .references(() => users.id),
+    ownerId: d.uuid().notNull(), // Reference to users table
     isPublic: d.boolean().default(false),
     metadata: d.jsonb(), // Additional file metadata (dimensions, duration, etc.)
     createdAt: d
       .timestamp({ withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
-    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+    updatedAt: d.timestamp({ withTimezone: true }),
   }),
   (t) => [
     index("file_owner_id_idx").on(t.ownerId),
@@ -100,23 +96,20 @@ export const files = createTable(
 
 /**
  * Shares table - stores file/folder sharing information
+ *
+ * Note: fileId and folderId are mutually exclusive - only one should be set
+ * This represents sharing either a file OR a folder, not both
  */
 export const shares = createTable(
   "share",
   (d) => ({
     id: d.uuid().primaryKey().defaultRandom(),
-    fileId: d.uuid(), // Reference to files table
-    folderId: d.uuid(), // Reference to folders table
-    ownerId: d
-      .uuid()
-      .notNull()
-      .references(() => users.id),
-    sharedWithId: d
-      .uuid()
-      .notNull()
-      .references(() => users.id),
+    fileId: d.uuid(), // Reference to files table (mutually exclusive with folderId)
+    folderId: d.uuid(), // Reference to folders table (mutually exclusive with fileId)
+    ownerId: d.uuid().notNull(), // User who owns the file/folder
+    sharedWithId: d.uuid().notNull(), // User who receives the share
     permission: d.varchar({ length: 20 }).notNull().default("view"), // 'view' or 'edit'
-    expiresAt: d.timestamp({ withTimezone: true }),
+    expiresAt: d.timestamp({ withTimezone: true }), // Optional expiration
     createdAt: d
       .timestamp({ withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
@@ -132,21 +125,21 @@ export const shares = createTable(
 
 /**
  * Public links table - stores public sharing links
+ *
+ * Note: fileId and folderId are mutually exclusive - only one should be set
+ * This represents sharing either a file OR a folder publicly, not both
  */
 export const publicLinks = createTable(
   "public_link",
   (d) => ({
     id: d.uuid().primaryKey().defaultRandom(),
     token: d.varchar({ length: 100 }).notNull().unique(), // Unique token for the link
-    fileId: d.uuid(), // Reference to files table
-    folderId: d.uuid(), // Reference to folders table
-    ownerId: d
-      .uuid()
-      .notNull()
-      .references(() => users.id),
+    fileId: d.uuid(), // Reference to files table (mutually exclusive with folderId)
+    folderId: d.uuid(), // Reference to folders table (mutually exclusive with fileId)
+    ownerId: d.uuid().notNull(), // User who owns the file/folder
     permission: d.varchar({ length: 20 }).notNull().default("view"), // 'view' or 'edit'
-    expiresAt: d.timestamp({ withTimezone: true }),
-    downloadCount: d.integer().default(0),
+    expiresAt: d.timestamp({ withTimezone: true }), // Optional expiration
+    downloadCount: d.integer().default(0), // Track usage
     createdAt: d
       .timestamp({ withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)

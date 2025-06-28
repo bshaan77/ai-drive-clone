@@ -25,14 +25,16 @@ import type { FileRecord } from "~/types/file";
 interface RenameDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  file: FileRecord | null;
-  onRename: (fileId: string, newName: string) => Promise<void>;
+  item: FileRecord | { id: string; name: string } | null;
+  itemType: "file" | "folder";
+  onRename: (itemId: string, newName: string) => Promise<void>;
 }
 
 export function RenameDialog({
   isOpen,
   onClose,
-  file,
+  item,
+  itemType,
   onRename,
 }: RenameDialogProps) {
   const [newName, setNewName] = useState("");
@@ -41,29 +43,31 @@ export function RenameDialog({
 
   // Reset state when dialog opens/closes
   useEffect(() => {
-    if (isOpen && file) {
-      setNewName(file.name);
+    if (isOpen && item) {
+      setNewName(item.name);
       setError(null);
     } else {
       setNewName("");
       setError(null);
     }
-  }, [isOpen, file]);
+  }, [isOpen, item]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!file) return;
+    if (!item) return;
 
     const trimmedName = newName.trim();
 
     // Validation
     if (!trimmedName) {
-      setError("File name cannot be empty");
+      setError(
+        `${itemType === "file" ? "File" : "Folder"} name cannot be empty`,
+      );
       return;
     }
 
-    if (trimmedName === file.name) {
+    if (trimmedName === item.name) {
       onClose();
       return;
     }
@@ -71,7 +75,7 @@ export function RenameDialog({
     // Check for invalid characters
     const invalidChars = /[<>:"/\\|?*]/;
     if (invalidChars.test(trimmedName)) {
-      setError("File name contains invalid characters");
+      setError("Name contains invalid characters");
       return;
     }
 
@@ -79,10 +83,12 @@ export function RenameDialog({
     setError(null);
 
     try {
-      await onRename(file.id, trimmedName);
+      await onRename(item.id, trimmedName);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to rename file");
+      setError(
+        err instanceof Error ? err.message : `Failed to rename ${itemType}`,
+      );
     } finally {
       setIsLoading(false);
     }
@@ -94,28 +100,30 @@ export function RenameDialog({
     }
   };
 
-  if (!file) return null;
+  if (!item) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Rename file</DialogTitle>
+          <DialogTitle>Rename {itemType}</DialogTitle>
           <DialogDescription>
-            Enter a new name for &quot;{file.originalName}&quot;
+            Enter a new name for &quot;{item.name}&quot;
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="filename">File name</Label>
+              <Label htmlFor="itemname">
+                {itemType === "file" ? "File" : "Folder"} name
+              </Label>
               <Input
-                id="filename"
+                id="itemname"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Enter file name"
+                placeholder={`Enter ${itemType} name`}
                 disabled={isLoading}
                 autoFocus
               />

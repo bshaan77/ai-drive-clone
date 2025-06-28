@@ -4,13 +4,14 @@ import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { Download, Share, Trash2, FolderOpen, X, Edit } from "lucide-react";
 
-interface FileSelection {
+interface ItemSelection {
   selectedFiles: Set<string>;
+  selectedFolders: Set<string>;
   isAllSelected: boolean;
 }
 
 interface BulkActionsToolbarProps {
-  selection: FileSelection;
+  selection: ItemSelection;
   onClearSelection: () => void;
   onBulkDownload: () => void;
   onBulkShare: () => void;
@@ -28,28 +29,42 @@ export function BulkActionsToolbar({
   onBulkDelete,
   onBulkRename,
 }: BulkActionsToolbarProps) {
-  const selectedCount = selection.selectedFiles.size;
+  const selectedFilesCount = selection.selectedFiles.size;
+  const selectedFoldersCount = selection.selectedFolders.size;
+  const totalSelected = selectedFilesCount + selectedFoldersCount;
 
-  if (selectedCount === 0) return null;
+  if (totalSelected === 0) return null;
+
+  const getSelectionText = () => {
+    if (selectedFilesCount > 0 && selectedFoldersCount > 0) {
+      return `${selectedFilesCount} file${selectedFilesCount > 1 ? "s" : ""} and ${selectedFoldersCount} folder${selectedFoldersCount > 1 ? "s" : ""} selected`;
+    } else if (selectedFilesCount > 0) {
+      return `${selectedFilesCount} file${selectedFilesCount > 1 ? "s" : ""} selected`;
+    } else {
+      return `${selectedFoldersCount} folder${selectedFoldersCount > 1 ? "s" : ""} selected`;
+    }
+  };
 
   return (
     <div className="mb-4 flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
       <span className="text-sm font-medium text-blue-900">
-        {selectedCount} file{selectedCount > 1 ? "s" : ""} selected
+        {getSelectionText()}
       </span>
 
       <Separator orientation="vertical" className="mx-2 h-4" />
 
       <div className="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onBulkDownload}
-          className="text-blue-700 hover:bg-blue-100 hover:text-blue-900"
-        >
-          <Download className="mr-1 h-4 w-4" />
-          Download
-        </Button>
+        {selectedFilesCount > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBulkDownload}
+            className="text-blue-700 hover:bg-blue-100 hover:text-blue-900"
+          >
+            <Download className="mr-1 h-4 w-4" />
+            Download
+          </Button>
+        )}
 
         <Button
           variant="ghost"

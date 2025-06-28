@@ -42,6 +42,7 @@ export interface FileSelection {
 
 export interface FileActions {
   onDownload: (fileId: string) => void;
+  onPreview: (fileId: string) => void;
   onShare: (fileId: string) => void;
   onRename: (fileId: string, newName: string) => void;
   onMove: (fileId: string, folderId: string) => void;
