@@ -18,6 +18,7 @@ import {
 } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "~/components/ui/sonner";
+import { ErrorBoundary } from "~/components/error-boundary";
 
 export const metadata: Metadata = {
   title: "Google Drive Clone",
@@ -56,7 +57,7 @@ export default function RootLayout({
               <UserButton />
             </SignedIn>
           </header>
-          {children}
+          <ErrorBoundary>{children}</ErrorBoundary>
           <Toaster />
         </body>
       </html>

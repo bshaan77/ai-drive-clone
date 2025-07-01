@@ -1,37 +1,27 @@
 "use client";
 
-import {
-  Clock,
-  Home,
-  Star,
-  Trash2,
-  Users,
-  HardDrive,
-  Plus,
-  Menu,
-  BarChart3,
-} from "lucide-react";
-import Link from "next/link";
-import { useState, useEffect } from "react";
-
+import { useState, useCallback } from "react";
+import { BarChart3, Users, HardDrive, Plus } from "lucide-react";
+import { Button } from "~/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarGroup,
+  SidebarGroupContent,
   SidebarSeparator,
-  SidebarTrigger,
+  SidebarFooter,
 } from "~/components/ui/sidebar";
-import { Button } from "~/components/ui/button";
-import { Progress } from "~/components/ui/progress";
-import { FolderTree } from "~/components/folder-tree";
-import { SharedItemsTree } from "~/components/folder-tree";
+import { FolderTree } from "./folder-tree";
+import { SharedItemsTree } from "./folder-tree/SharedItemsTree";
+import { Home } from "lucide-react";
+import Link from "next/link";
+import { useEffect } from "react";
 import { useIsMobile } from "~/hooks/use-mobile";
+import { Progress } from "~/components/ui/progress";
 
 interface AppSidebarProps {
   currentFolderId: string | null;

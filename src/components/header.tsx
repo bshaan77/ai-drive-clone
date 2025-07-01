@@ -1,25 +1,10 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
-import { Bell, Grid3X3, Search, X, Menu } from "lucide-react";
+import { Bell, Grid3X3 } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "~/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "~/components/ui/popover";
 import { SidebarTrigger } from "~/components/ui/sidebar";
 import { Badge } from "~/components/ui/badge";
-import { SearchBar } from "~/components/search-bar";
+import { SearchBar } from "./search-bar";
 import { useIsMobile } from "~/hooks/use-mobile";
 import { KeyboardShortcutsHelp } from "~/components/ui/keyboard-shortcuts-help";
 
