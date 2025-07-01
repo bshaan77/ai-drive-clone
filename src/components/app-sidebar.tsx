@@ -55,21 +55,6 @@ const navigationItems = [
     url: "/shared-with-me",
     icon: Users,
   },
-  {
-    title: "Recent",
-    url: "/recent",
-    icon: Clock,
-  },
-  {
-    title: "Starred",
-    url: "/starred",
-    icon: Star,
-  },
-  {
-    title: "Trash",
-    url: "/trash",
-    icon: Trash2,
-  },
 ];
 
 export function AppSidebar({
