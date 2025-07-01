@@ -16,13 +16,21 @@ import { useIsMobile } from "~/hooks/use-mobile";
  */
 export function MainContentWrapper() {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [showCreateFolderDialog, setShowCreateFolderDialog] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const isMobile = useIsMobile();
 
   const handleFolderSelect = useCallback((folderId: string | null) => {
     setCurrentFolderId(folderId);
   }, []);
 
-  // Optionally: handle search navigation, etc.
+  const handleCreateFolder = useCallback(() => {
+    setShowCreateFolderDialog(true);
+  }, []);
+
+  const handleUploadFiles = useCallback(() => {
+    setShowUploadModal(true);
+  }, []);
 
   return (
     <SidebarProvider defaultOpen={!isMobile}>
@@ -30,12 +38,18 @@ export function MainContentWrapper() {
         <AppSidebar
           currentFolderId={currentFolderId}
           onFolderSelect={handleFolderSelect}
+          onCreateFolder={handleCreateFolder}
+          onUploadFiles={handleUploadFiles}
         />
         <SidebarInset className="flex flex-1 flex-col transition-all duration-300 ease-in-out">
           <Header /* onSearchNavigation={...} */ />
           <MainContent
             currentFolderId={currentFolderId}
             onFolderSelect={handleFolderSelect}
+            showCreateFolderDialog={showCreateFolderDialog}
+            setShowCreateFolderDialog={setShowCreateFolderDialog}
+            showUploadModal={showUploadModal}
+            setShowUploadModal={setShowUploadModal}
           />
         </SidebarInset>
       </div>

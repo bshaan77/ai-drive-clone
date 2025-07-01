@@ -48,18 +48,25 @@ import { toast } from "sonner";
 interface MainContentProps {
   currentFolderId: string | null;
   onFolderSelect: (folderId: string | null) => void;
+  showCreateFolderDialog?: boolean;
+  setShowCreateFolderDialog?: (show: boolean) => void;
+  showUploadModal?: boolean;
+  setShowUploadModal?: (show: boolean) => void;
 }
 
 export function MainContent({
   currentFolderId,
   onFolderSelect,
+  showCreateFolderDialog,
+  setShowCreateFolderDialog,
+  showUploadModal,
+  setShowUploadModal,
 }: MainContentProps) {
   const [files, setFiles] = useState<FileRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isDragOver, setIsDragOver] = useState(false);
-  const [showUploadModal, setShowUploadModal] = useState(false);
   const [sortField, setSortField] = useState<
     "name" | "size" | "createdAt" | "category"
   >("createdAt");
@@ -123,7 +130,7 @@ export function MainContent({
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
-    onUpload: () => setShowUploadModal(true),
+    onUpload: () => setShowUploadModal?.(true),
     onNewFolder: () => setCreateFolderDialog(true),
     onSelectAll: () => handleSelectAll(true),
     onClearSelection: clearSelection,
@@ -990,7 +997,7 @@ export function MainContent({
             )}
             <Button
               className="bg-blue-600 hover:bg-blue-700"
-              onClick={() => setShowUploadModal(true)}
+              onClick={() => setShowUploadModal?.(true)}
             >
               <Plus className="mr-2 h-4 w-4" />
               Upload files
@@ -1052,7 +1059,7 @@ export function MainContent({
         {/* Upload Zone */}
         {shouldShowUploadZone && (
           <BulkContextMenu
-            onUpload={() => setShowUploadModal(true)}
+            onUpload={() => setShowUploadModal?.(true)}
             onNewFolder={() => setCreateFolderDialog(true)}
           >
             <div
@@ -1151,7 +1158,7 @@ export function MainContent({
         {/* Files Display */}
         {hasContent && (
           <BulkContextMenu
-            onUpload={() => setShowUploadModal(true)}
+            onUpload={() => setShowUploadModal?.(true)}
             onNewFolder={() => setCreateFolderDialog(true)}
             onBulkDownload={handleBulkDownload}
             onBulkShare={handleBulkShare}
@@ -1275,8 +1282,10 @@ export function MainContent({
 
         {/* Create Folder Dialog */}
         <CreateFolderDialog
-          isOpen={createFolderDialog}
-          onClose={() => setCreateFolderDialog(false)}
+          isOpen={showCreateFolderDialog ?? createFolderDialog}
+          onClose={() =>
+            setShowCreateFolderDialog?.(false) ?? setCreateFolderDialog(false)
+          }
           onCreateFolder={handleCreateFolder}
         />
       </div>
@@ -1285,7 +1294,7 @@ export function MainContent({
       <Button
         size="icon"
         className="fixed right-6 bottom-6 h-14 w-14 rounded-full bg-blue-600 shadow-lg hover:bg-blue-700 lg:hidden"
-        onClick={() => setShowUploadModal(true)}
+        onClick={() => setShowUploadModal?.(true)}
       >
         <Plus className="h-6 w-6" />
         <span className="sr-only">Upload files</span>
@@ -1293,8 +1302,8 @@ export function MainContent({
 
       {/* Upload Modal */}
       <UploadModal
-        isOpen={showUploadModal}
-        onClose={() => setShowUploadModal(false)}
+        isOpen={showUploadModal ?? false}
+        onClose={() => setShowUploadModal?.(false)}
         onUploadComplete={handleUploadComplete}
         folderId={currentFolderId}
       />

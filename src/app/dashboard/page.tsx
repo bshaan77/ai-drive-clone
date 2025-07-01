@@ -258,12 +258,24 @@ export default function DashboardPage() {
     // No-op for dashboard page since it doesn't use folder navigation
   };
 
+  const handleCreateFolder = () => {
+    // For dashboard, we could navigate to the main drive page
+    window.location.href = "/";
+  };
+
+  const handleUploadFiles = () => {
+    // For dashboard, we could navigate to the main drive page
+    window.location.href = "/";
+  };
+
   return (
     <SidebarProvider defaultOpen={!isMobile}>
       <div className="flex min-h-screen w-full bg-gray-50 transition-all duration-300 ease-in-out">
         <AppSidebar
           currentFolderId={null}
           onFolderSelect={handleFolderSelect}
+          onCreateFolder={handleCreateFolder}
+          onUploadFiles={handleUploadFiles}
         />
         <SidebarInset className="flex flex-1 flex-col transition-all duration-300 ease-in-out">
           <Header />
