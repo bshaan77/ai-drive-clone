@@ -224,11 +224,49 @@ pnpm test:e2e
 
 ## 🚀 Deployment
 
-### Vercel (Recommended)
+### Deploy to Vercel (Recommended)
 
-1. Connect your GitHub repository to Vercel
-2. Set up environment variables in Vercel dashboard
-3. Deploy automatically on push to main branch
+1. **Connect your repository to Vercel**
+   - Go to [vercel.com](https://vercel.com)
+   - Import your GitHub repository
+   - Vercel will automatically detect Next.js
+
+2. **Configure environment variables**
+   In your Vercel project settings, add the following environment variables:
+
+   ```env
+   # Database
+   DATABASE_URL="postgresql://..."
+
+   # Authentication (Clerk)
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_..."
+   CLERK_SECRET_KEY="sk_..."
+
+   # File Storage (Vercel Blob)
+   BLOB_READ_WRITE_TOKEN="..."
+
+   # Clerk Webhook (for user sync)
+   CLERK_WEBHOOK_SECRET="whsec_..."
+   ```
+
+3. **Set up Clerk webhook**
+   - In your Clerk dashboard, go to Webhooks
+   - Add a new webhook endpoint: `https://your-domain.vercel.app/api/webhooks/clerk`
+   - Select events: `user.created`, `user.updated`, `user.deleted`
+   - Copy the webhook secret to your Vercel environment variables
+
+4. **Deploy**
+   - Push to your main branch
+   - Vercel will automatically deploy your changes
+
+### Production Checklist
+
+- [ ] Environment variables configured
+- [ ] Database migrations applied
+- [ ] Clerk webhook configured
+- [ ] Domain configured (optional)
+- [ ] SSL certificate active
+- [ ] Performance monitoring enabled
 
 ### Manual Deployment
 

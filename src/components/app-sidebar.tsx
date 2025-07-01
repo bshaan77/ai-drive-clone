@@ -1,41 +1,46 @@
 "use client";
 
+import { useState } from "react";
 import {
-  Clock,
-  Home,
-  Star,
-  Trash2,
+  BarChart3,
   Users,
   HardDrive,
   Plus,
-  Menu,
-  BarChart3,
+  Folder,
+  Upload,
 } from "lucide-react";
-import Link from "next/link";
-import { useState, useEffect } from "react";
-
+import { Button } from "~/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarGroup,
+  SidebarGroupContent,
   SidebarSeparator,
-  SidebarTrigger,
+  SidebarFooter,
 } from "~/components/ui/sidebar";
-import { Button } from "~/components/ui/button";
-import { Progress } from "~/components/ui/progress";
-import { FolderTree } from "~/components/folder-tree";
-import { SharedItemsTree } from "~/components/folder-tree";
+import { FolderTree } from "./folder-tree";
+import { SharedItemsTree } from "./folder-tree/SharedItemsTree";
+import { Home } from "lucide-react";
+import Link from "next/link";
+import { useEffect } from "react";
 import { useIsMobile } from "~/hooks/use-mobile";
+import { Progress } from "~/components/ui/progress";
 
 interface AppSidebarProps {
   currentFolderId: string | null;
   onFolderSelect: (folderId: string | null) => void;
+  onCreateFolder?: () => void;
+  onUploadFiles?: () => void;
 }
 
 const navigationItems = [
@@ -60,12 +65,13 @@ const navigationItems = [
 export function AppSidebar({
   currentFolderId,
   onFolderSelect,
+  onCreateFolder,
+  onUploadFiles,
 }: AppSidebarProps) {
   const [storageUsed, setStorageUsed] = useState(0);
   const [totalFiles, setTotalFiles] = useState(0);
   const storageTotal = 15; // GB
   const storagePercentage = (storageUsed / storageTotal) * 100;
-  const isMobile = useIsMobile();
 
   // Fetch real storage data
   useEffect(() => {
@@ -110,10 +116,24 @@ export function AppSidebar({
         <SidebarGroup>
           <SidebarGroupContent>
             <div className="mb-4 px-2">
-              <Button className="w-full justify-start gap-3 bg-blue-600 text-white shadow-sm transition-all duration-200 hover:bg-blue-700 hover:shadow-md">
-                <Plus className="h-4 w-4" />
-                New
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="w-full justify-start gap-3 bg-blue-600 text-white shadow-sm transition-all duration-200 hover:bg-blue-700 hover:shadow-md">
+                    <Plus className="h-4 w-4" />
+                    New
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem onClick={onCreateFolder}>
+                    <Folder className="mr-2 h-4 w-4" />
+                    New folder
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onUploadFiles}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload files
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <SidebarMenu>
               {navigationItems.map((item) => (
