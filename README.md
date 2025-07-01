@@ -1,6 +1,6 @@
 # Google Drive Clone
 
-A modern, AI-first file management application built with the T3 stack. This project demonstrates how to build a fully functional Google Drive clone with advanced features and clean, maintainable code.
+This project is a speed build challenge to build a fully functional Google Drive clone, then enhance it with AI features that surpass the functionality of Google Docs or Grammarly  Throughout the process I will be using AI first development principles to minimize the amount of manually written lines of code and complete the project as quick as possible.
 
 ## 🎯 Project Overview
 
@@ -28,8 +28,8 @@ This is a learning project that showcases the development of a Google Drive clon
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/yourusername/drive-tutorial-ishaan.git
-   cd drive-tutorial-ishaan
+   git clone https://github.com/bshaan77/ai-drive-clone.git
+   cd ai-drive-clone
    ```
 
 2. **Install dependencies**
@@ -56,6 +56,12 @@ This is a learning project that showcases the development of a Google Drive clon
 
    # File Storage (Vercel Blob)
    BLOB_READ_WRITE_TOKEN="..."
+
+   # Optional: Clerk Webhook (for user sync)
+   CLERK_WEBHOOK_SECRET="whsec_..."
+
+   # Optional: App URL (for production)
+   NEXT_PUBLIC_APP_URL="https://your-domain.vercel.app"
    ```
 
 4. **Set up the database**
@@ -88,7 +94,7 @@ This is a learning project that showcases the development of a Google Drive clon
 - **Next.js API Routes** - Server-side API endpoints
 - **Drizzle ORM** - Type-safe database queries
 - **PostgreSQL** - Primary database (hosted on Neon)
-- **Supabase** - Backend-as-a-Service with additional features
+- **Neon** - Serverless Postgres database with branching
 
 ### Authentication & Storage
 
@@ -101,6 +107,21 @@ This is a learning project that showcases the development of a Google Drive clon
 - **pnpm** - Fast package manager
 - **ESLint + Prettier** - Code quality and formatting
 - **Vercel** - Deployment platform
+
+## 🗄️ Database Schema
+
+The application uses a PostgreSQL database with the following structure:
+
+<iframe width="560" height="315" src='https://dbdiagram.io/e/685f5401f413ba350845721b/68645db2f413ba3508cc12b8'> </iframe>
+
+### Key Tables
+
+- **Users** - User information from Clerk authentication
+- **Files** - File metadata and Vercel Blob storage references
+- **Folders** - Hierarchical folder structure with nested organization
+- **Shares** - File/folder sharing between users with permissions
+- **Public Links** - Public sharing links with usage tracking
+- **File Versions** - Version history for file changes
 
 ## 📁 Project Structure
 
@@ -155,30 +176,30 @@ Inspired by Notion and Grammarly, the design focuses on:
 
 ## 🚀 Development Phases
 
-The project follows a 3-4 day development cycle:
+The project follows a 3 day development cycle:
 
-### Phase 1: Project Setup (2-3 hours)
+### Phase 1: Project Setup
 
 - Initialize Next.js with T3 stack
 - Set up authentication and database
 - Create basic layout with V0
 - Configure file storage
 
-### Phase 2: File Upload & Display (3-4 hours)
+### Phase 2: File Upload & Display
 
 - Drag-and-drop file upload
 - File grid/list display
 - File operations (download, rename, delete)
 - Folder system
 
-### Phase 3: Search & Sharing (3-4 hours)
+### Phase 3: Search & Sharing
 
 - Real-time search functionality
 - File sharing between users
 - Public link sharing
 - Shared files view
 
-### Phase 4: Polish & Deploy (3-4 hours)
+### Phase 4: Polish & Deploy
 
 - UI polish and responsiveness
 - File preview capabilities
@@ -308,6 +329,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Shadcn/ui](https://ui.shadcn.com/) for beautiful components
 - [V0](https://v0.dev/) for AI-powered UI scaffolding
 
----
 
-Built with ❤️ using modern web technologies

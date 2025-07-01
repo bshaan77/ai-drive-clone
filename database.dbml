@@ -1,86 +1,140 @@
 // Google Drive Clone Database Schema
-// Generated from Drizzle introspection
+// Generated from Drizzle introspection - Updated to match actual schema
 
 Table drive_tutorial_ishaan_user {
   id uuid [pk]
-  clerkId varchar(255) [unique]
-  email varchar(255)
+  clerkId varchar(255) [unique, note: 'Clerk user ID']
+  email varchar(255) [not null]
   firstName varchar(100)
   lastName varchar(100)
   avatarUrl varchar(500)
-  createdAt timestamp
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
   updatedAt timestamp
+  
+  indexes {
+    clerkId [name: 'clerk_id_idx']
+    email [name: 'email_idx']
+  }
   
   Note: 'Stores user information from Clerk with minimal data duplication'
 }
 
 Table drive_tutorial_ishaan_folder {
   id uuid [pk]
-  name varchar(255)
+  name varchar(255) [not null]
   description text
   parentId uuid [note: 'Self-referencing for nested folders']
-  ownerId uuid [ref: > drive_tutorial_ishaan_user.id]
+  ownerId uuid [not null]
   isPublic boolean [default: false]
-  createdAt timestamp
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
   updatedAt timestamp
+  
+  indexes {
+    ownerId [name: 'folder_owner_id_idx']
+    parentId [name: 'folder_parent_id_idx']
+    name [name: 'folder_name_idx']
+  }
   
   Note: 'Stores folder information with hierarchical structure'
 }
 
 Table drive_tutorial_ishaan_file {
   id uuid [pk]
-  name varchar(255)
-  originalName varchar(255)
-  mimeType varchar(100)
-  size integer [note: 'File size in bytes']
-  blobUrl varchar(500) [note: 'Vercel Blob URL']
-  folderId uuid [ref: > drive_tutorial_ishaan_folder.id]
-  ownerId uuid [ref: > drive_tutorial_ishaan_user.id]
+  name varchar(255) [not null]
+  originalName varchar(255) [not null]
+  mimeType varchar(100) [not null]
+  size integer [not null, note: 'File size in bytes']
+  blobUrl varchar(500) [not null, note: 'Vercel Blob URL']
+  folderId uuid
+  ownerId uuid [not null]
   isPublic boolean [default: false]
   metadata jsonb [note: 'Additional file metadata']
-  createdAt timestamp
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
   updatedAt timestamp
+  
+  indexes {
+    ownerId [name: 'file_owner_id_idx']
+    folderId [name: 'file_folder_id_idx']
+    name [name: 'file_name_idx']
+    mimeType [name: 'file_mime_type_idx']
+  }
   
   Note: 'Stores file metadata and references to Vercel Blob storage'
 }
 
 Table drive_tutorial_ishaan_share {
   id uuid [pk]
-  fileId uuid [ref: > drive_tutorial_ishaan_file.id, note: 'Mutually exclusive with folderId']
-  folderId uuid [ref: > drive_tutorial_ishaan_folder.id, note: 'Mutually exclusive with fileId']
-  ownerId uuid [ref: > drive_tutorial_ishaan_user.id, note: 'User who owns the file/folder']
-  sharedWithId uuid [ref: > drive_tutorial_ishaan_user.id, note: 'User who receives the share']
-  permission varchar(20) [default: 'view', note: 'view or edit']
+  fileId uuid [note: 'Mutually exclusive with folderId']
+  folderId uuid [note: 'Mutually exclusive with fileId']
+  ownerId uuid [not null, note: 'User who owns the file/folder']
+  sharedWithId uuid [not null, note: 'User who receives the share']
+  permission varchar(20) [not null, default: 'view', note: 'view or edit']
   expiresAt timestamp [note: 'Optional expiration']
-  createdAt timestamp
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  
+  indexes {
+    fileId [name: 'share_file_id_idx']
+    folderId [name: 'share_folder_id_idx']
+    ownerId [name: 'share_owner_id_idx']
+    sharedWithId [name: 'share_shared_with_id_idx']
+  }
   
   Note: 'Stores file/folder sharing information between users'
 }
 
 Table drive_tutorial_ishaan_public_link {
   id uuid [pk]
-  token varchar(100) [unique, note: 'Unique token for the link']
-  fileId uuid [ref: > drive_tutorial_ishaan_file.id, note: 'Mutually exclusive with folderId']
-  folderId uuid [ref: > drive_tutorial_ishaan_folder.id, note: 'Mutually exclusive with fileId']
-  ownerId uuid [ref: > drive_tutorial_ishaan_user.id, note: 'User who owns the file/folder']
-  permission varchar(20) [default: 'view', note: 'view or edit']
+  token varchar(100) [unique, not null, note: 'Unique token for the link']
+  fileId uuid [note: 'Mutually exclusive with folderId']
+  folderId uuid [note: 'Mutually exclusive with fileId']
+  ownerId uuid [not null, note: 'User who owns the file/folder']
+  permission varchar(20) [not null, default: 'view', note: 'view or edit']
   expiresAt timestamp [note: 'Optional expiration']
   downloadCount integer [default: 0, note: 'Track usage']
-  createdAt timestamp
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  
+  indexes {
+    token [name: 'public_link_token_idx']
+    fileId [name: 'public_link_file_id_idx']
+    folderId [name: 'public_link_folder_id_idx']
+    ownerId [name: 'public_link_owner_id_idx']
+  }
   
   Note: 'Stores public sharing links for files and folders'
 }
 
 Table drive_tutorial_ishaan_file_version {
   id uuid [pk]
-  fileId uuid [ref: > drive_tutorial_ishaan_file.id]
-  version integer [note: 'Version number']
-  blobUrl varchar(500)
-  size integer
-  createdAt timestamp
+  fileId uuid [not null]
+  version integer [not null, note: 'Version number']
+  blobUrl varchar(500) [not null]
+  size integer [not null]
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  
+  indexes {
+    fileId [name: 'file_version_file_id_idx']
+    version [name: 'file_version_version_idx']
+  }
   
   Note: 'Stores file version history for tracking changes'
 }
 
-// Self-referencing relationship for nested folders
-Ref: drive_tutorial_ishaan_folder.parentId > drive_tutorial_ishaan_folder.id 
+// Relationships
+Ref: drive_tutorial_ishaan_folder.parentId > drive_tutorial_ishaan_folder.id
+
+// User relationships
+Ref: drive_tutorial_ishaan_file.ownerId > drive_tutorial_ishaan_user.id
+Ref: drive_tutorial_ishaan_folder.ownerId > drive_tutorial_ishaan_user.id
+Ref: drive_tutorial_ishaan_share.ownerId > drive_tutorial_ishaan_user.id
+Ref: drive_tutorial_ishaan_share.sharedWithId > drive_tutorial_ishaan_user.id
+Ref: drive_tutorial_ishaan_public_link.ownerId > drive_tutorial_ishaan_user.id
+
+// File relationships
+Ref: drive_tutorial_ishaan_file.folderId > drive_tutorial_ishaan_folder.id
+Ref: drive_tutorial_ishaan_share.fileId > drive_tutorial_ishaan_file.id
+Ref: drive_tutorial_ishaan_public_link.fileId > drive_tutorial_ishaan_file.id
+Ref: drive_tutorial_ishaan_file_version.fileId > drive_tutorial_ishaan_file.id
+
+// Folder relationships
+Ref: drive_tutorial_ishaan_share.folderId > drive_tutorial_ishaan_folder.id
+Ref: drive_tutorial_ishaan_public_link.folderId > drive_tutorial_ishaan_folder.id 

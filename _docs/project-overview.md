@@ -1,11 +1,10 @@
 # Project Overview: Google Drive Clone
 
-This project-overview will provide a high level overview of the google drive clone.
-This project is a speed build challenge to build a fully functional Google Drive clone, then enhance it with advanced AI-driven features that surpass existing writing tools. The goal is to leverage modern AI development tools and methodologies throughout the process.
+This project is a speed build challenge to build a fully functional Google Drive clone, then enhance it with AI features that surpass the functionality of Google Docs or Grammarly  Throughout the process I will be using AI first development principles to minimize the amount of manually written lines of code and complete the project as quick as possible.
 
 ## Purpose and Vision
 
-The primary purpose of this project is to develop a google drive clone as a learning assignment for an AI Software Engineer. Google Drive is a large complex enterprise app that will teach me about how all the different technologies interact with each other in order to manage, share, and collaborate on files. Once the google drive clone is complete is will also serve as a foundation for experimenting with AI tools and features that can be added onto the clone to make it better than google drive.
+The purpose of this project is to serve as a learning project for modern AI tools that software engineers are using for development. I choose to clone google drive because it is a large and complex enterprise app that will teach me how different technologies intereact with one another: such as uploading, downloading, sharing, and managing of files and folders. Once the google drive clone is complete is will also serve as a foundation for experimenting with AI tools and features that can be added onto the clone to make it better than google drive. Personally I can also see the possibility of forking this project and adapting it to a Learning Managment System I developed for students preparing college applications. The file storage and collaboration could be customized for the college application writing process, serving as the best place to manage applications. 
 
 ## Core functionalities
 
@@ -102,7 +101,7 @@ The primary purpose of this project is to develop a google drive clone as a lear
 
 ## Scope
 
-### Phase 1: Core Clone:
+### Part 1: Core Clone:
 
 - User authentication (registration, login, logout).
 - File upload, download, delete, rename, move.
@@ -113,7 +112,7 @@ The primary purpose of this project is to develop a google drive clone as a lear
 - Search functionality for file and folder names.
 - Web-based user interface.
 
-### Phase 2: AI Enhancement:
+### Part 2: AI Enhancement:
 
 - Context-aware suggestions powered by large language models
 - Personalized writing recommendations based on user goals

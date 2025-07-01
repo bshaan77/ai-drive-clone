@@ -48,12 +48,12 @@ This document outlines the complete technology stack for the Google Drive clone 
 - **Why Chosen**: Performance-focused, type-safe, modern approach to database access
 - **PostgreSQL Support**: Full support for PostgreSQL 15 features
 
-### **Database Platform:** Supabase
+### **Database Platform:** Neon
 
-- **Purpose**: Backend-as-a-Service with PostgreSQL, auth, and real-time features
-- **Key Features**: Built-in authentication, real-time subscriptions, auto-generated APIs
+- **Purpose**: Serverless PostgreSQL database hosting with branching capabilities
+- **Key Features**: Serverless architecture, database branching, automatic scaling, connection pooling
 - **PostgreSQL Version**: PostgreSQL 15 (latest stable)
-- **Why Chosen**: Simplifies backend development, provides additional features beyond just database
+- **Why Chosen**: Excellent performance, cost-effective for development and production, modern serverless approach
 
 ## Authentication & User Management
 
@@ -161,7 +161,7 @@ The application follows a modern full-stack architecture with clear separation o
 
 - **Frontend**: Next.js with React, TypeScript, Tailwind CSS, and Shadcn/ui
 - **Backend**: Next.js API Routes with Drizzle ORM
-- **Database**: PostgreSQL hosted on Neon/Supabase
+- **Database**: PostgreSQL hosted on Neon
 - **File Storage**: Vercel Blob Storage
 - **Authentication**: Clerk
 - **Real-time**: Server-Sent Events
