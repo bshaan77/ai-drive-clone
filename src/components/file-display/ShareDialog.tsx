@@ -97,7 +97,7 @@ export function ShareDialog({
       setError(null);
 
       const response = await fetch(
-        `/api/users/search?email=${encodeURIComponent(searchEmail)}`,
+        `/api/users/search?q=${encodeURIComponent(searchEmail)}`,
       );
       if (response.ok) {
         const data = (await response.json()) as { users?: User[] };

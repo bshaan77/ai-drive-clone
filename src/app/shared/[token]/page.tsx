@@ -12,7 +12,6 @@ import { useParams } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
-import { Separator } from "~/components/ui/separator";
 import {
   File,
   Folder,
@@ -22,7 +21,6 @@ import {
   User,
   Calendar,
   AlertCircle,
-  ExternalLink,
 } from "lucide-react";
 import { FilePreview } from "~/components/file-display/FilePreview";
 
@@ -336,40 +334,6 @@ export default function SharedResourcePage() {
           onClose={() => setShowPreview(false)}
           onDownload={handleDownload}
         />
-      )}
-
-      {/* Link Information */}
-      {publicLink && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ExternalLink className="h-5 w-5" />
-              Link Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Link Token:</span>
-                <code className="rounded bg-gray-100 px-2 py-1 text-sm">
-                  {publicLink.token}
-                </code>
-              </div>
-              {publicLink.expiresAt && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Expires:</span>
-                  <span className="font-medium">
-                    {new Date(publicLink.expiresAt).toLocaleDateString()}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-gray-600">Total Downloads:</span>
-                <span className="font-medium">{publicLink.downloadCount}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       )}
     </div>
   );
