@@ -9,8 +9,10 @@ import {
   HardDrive,
   Plus,
   Menu,
+  BarChart3,
 } from "lucide-react";
 import Link from "next/link";
+import { useState, useEffect } from "react";
 
 import {
   Sidebar,
@@ -44,24 +46,14 @@ const navigationItems = [
     isActive: true,
   },
   {
+    title: "Dashboard",
+    url: "/dashboard",
+    icon: BarChart3,
+  },
+  {
     title: "Shared with me",
     url: "/shared-with-me",
     icon: Users,
-  },
-  {
-    title: "Recent",
-    url: "/recent",
-    icon: Clock,
-  },
-  {
-    title: "Starred",
-    url: "/starred",
-    icon: Star,
-  },
-  {
-    title: "Trash",
-    url: "/trash",
-    icon: Trash2,
   },
 ];
 
@@ -69,10 +61,39 @@ export function AppSidebar({
   currentFolderId,
   onFolderSelect,
 }: AppSidebarProps) {
-  const storageUsed = 8.2; // GB
+  const [storageUsed, setStorageUsed] = useState(0);
+  const [totalFiles, setTotalFiles] = useState(0);
   const storageTotal = 15; // GB
   const storagePercentage = (storageUsed / storageTotal) * 100;
   const isMobile = useIsMobile();
+
+  // Fetch real storage data
+  useEffect(() => {
+    const fetchStorageData = async () => {
+      try {
+        const response = await fetch("/api/files");
+        const data = (await response.json()) as {
+          success: boolean;
+          files?: Array<{ size: number }>;
+          error?: string;
+        };
+
+        if (response.ok && data.success && data.files) {
+          const totalSize = data.files.reduce(
+            (sum, file) => sum + file.size,
+            0,
+          );
+          const usedGB = totalSize / (1024 * 1024 * 1024); // Convert bytes to GB
+          setStorageUsed(usedGB);
+          setTotalFiles(data.files.length);
+        }
+      } catch (error) {
+        console.error("Failed to fetch storage data:", error);
+      }
+    };
+
+    void fetchStorageData();
+  }, []);
 
   return (
     <Sidebar className="border-r border-gray-200 transition-all duration-300 ease-in-out">
@@ -149,20 +170,16 @@ export function AppSidebar({
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600">Storage</span>
             <span className="font-medium text-gray-900">
-              {storageUsed} GB of {storageTotal} GB used
+              {storageUsed.toFixed(1)} GB of {storageTotal} GB used
             </span>
           </div>
           <Progress
             value={storagePercentage}
             className="h-2 transition-all duration-300"
           />
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full border-blue-200 bg-transparent text-blue-600 transition-all duration-200 hover:border-blue-300 hover:bg-blue-50"
-          >
-            Get more storage
-          </Button>
+          <div className="text-center text-xs text-gray-500">
+            {totalFiles} files stored
+          </div>
         </div>
       </SidebarFooter>
     </Sidebar>

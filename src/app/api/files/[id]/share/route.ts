@@ -8,7 +8,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
 import { files, users, shares, publicLinks } from "~/server/db/schema";
-import { eq, and, or } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export async function POST(

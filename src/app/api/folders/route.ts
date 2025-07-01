@@ -10,7 +10,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
 import { folders, users } from "~/server/db/schema";
-import { eq, and, isNull, desc } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 
 export async function POST(request: NextRequest) {
   try {

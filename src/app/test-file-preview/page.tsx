@@ -12,7 +12,7 @@ import { FilePreview } from "~/components/file-display/FilePreview";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import {
   File,
-  Image,
+  Image as ImageIcon,
   FileText,
   FileVideo,
   FileAudio,
@@ -87,7 +87,7 @@ export default function TestFilePreviewPage() {
 
   const getFileIcon = (mimeType: string) => {
     if (mimeType.startsWith("image/"))
-      return <Image className="h-6 w-6 text-blue-500" />;
+      return <ImageIcon className="h-6 w-6 text-blue-500" />;
     if (mimeType.startsWith("video/"))
       return <FileVideo className="h-6 w-6 text-purple-500" />;
     if (mimeType.startsWith("audio/"))
