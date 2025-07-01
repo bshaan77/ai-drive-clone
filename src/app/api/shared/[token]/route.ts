@@ -7,7 +7,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { publicLinks, files, folders, users } from "~/server/db/schema";
-import { eq, and, isNull, gt } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 export async function GET(
   request: NextRequest,

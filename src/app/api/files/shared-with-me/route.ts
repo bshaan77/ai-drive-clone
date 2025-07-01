@@ -7,10 +7,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
-import { files, users, shares } from "~/server/db/schema";
+import { users, shares } from "~/server/db/schema";
 import { eq, and, isNotNull } from "drizzle-orm";
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) {
