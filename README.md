@@ -112,7 +112,7 @@ This is a learning project that showcases the development of a Google Drive clon
 
 The application uses a PostgreSQL database with the following structure:
 
-<iframe width="560" height="315" src='https://dbdiagram.io/e/685f5401f413ba350845721b/68645db2f413ba3508cc12b8'> </iframe>
+[📊 View Interactive Database Schema](https://dbdiagram.io/e/685f5401f413ba350845721b/68645db2f413ba3508cc12b8)
 
 ### Key Tables
 
