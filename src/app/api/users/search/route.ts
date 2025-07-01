@@ -1,14 +1,14 @@
 /**
  * User Search API Route
  *
- * Searches for users by email to enable file sharing functionality
+ * Searches for users by email, firstName, or lastName to enable file sharing functionality
  */
 
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "~/server/db";
 import { users } from "~/server/db/schema";
-import { eq, ilike, and, ne } from "drizzle-orm";
+import { eq, ilike, and, ne, or } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,9 +18,9 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const email = searchParams.get("email");
+    const query = searchParams.get("email") ?? searchParams.get("q");
 
-    if (!email || email.length < 3) {
+    if (!query || query.length < 2) {
       return NextResponse.json({ users: [] });
     }
 
@@ -33,10 +33,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Search for users by email (excluding current user)
+    // Search for users by email, firstName, or lastName (excluding current user)
     const searchResults = await db.query.users.findMany({
       where: and(
-        ilike(users.email, `%${email}%`),
+        or(
+          ilike(users.email, `%${query}%`),
+          ilike(users.firstName, `%${query}%`),
+          ilike(users.lastName, `%${query}%`),
+        ),
         ne(users.id, currentUser.id),
       ),
       columns: {
@@ -48,6 +52,10 @@ export async function GET(request: NextRequest) {
       },
       limit: 10,
     });
+
+    console.log(
+      `User search for "${query}": found ${searchResults.length} users`,
+    );
 
     return NextResponse.json({ users: searchResults });
   } catch (error) {

@@ -88,13 +88,14 @@ export async function POST(request: NextRequest) {
 
     if (!userRecord) {
       // Create user record if it doesn't exist
+      // Use a more descriptive placeholder that includes the user ID
       const userRecords = await db
         .insert(users)
         .values({
           clerkId: userId,
-          email: "user@example.com", // We'll update this later
-          firstName: "User",
-          lastName: "Name",
+          email: `user-${userId.slice(0, 8)}@example.com`,
+          firstName: "New",
+          lastName: "User",
         })
         .returning();
       userRecord = userRecords[0];
