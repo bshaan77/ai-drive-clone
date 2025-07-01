@@ -43,6 +43,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 interface MainContentProps {
   currentFolderId: string | null;
@@ -168,6 +169,21 @@ export function MainContent({
     },
   });
 
+  // Upload progress notification
+  useEffect(() => {
+    if (isUploading) {
+      toast.loading("Uploading files...", { id: "upload-progress" });
+    } else {
+      toast.dismiss("upload-progress");
+    }
+  }, [isUploading]);
+
+  useEffect(() => {
+    if (uploadError) {
+      toast.error(uploadError, { id: "upload-error" });
+    }
+  }, [uploadError]);
+
   // Fetch files from database
   const fetchFiles = useCallback(async () => {
     try {
@@ -281,8 +297,8 @@ export function MainContent({
 
   // Handle file upload completion
   const handleUploadComplete = useCallback(async () => {
-    // Refresh the file list after upload
     await fetchFiles();
+    toast.success("Upload complete!");
   }, [fetchFiles]);
 
   // Handle file selection
@@ -436,10 +452,12 @@ export function MainContent({
         }
 
         console.log("Rename successful, refreshing files");
-        // Refresh the file list
         await fetchFiles();
+        toast.success("File renamed");
       } catch (error) {
-        console.error("Rename error:", error);
+        toast.error(
+          error instanceof Error ? error.message : "Failed to rename file",
+        );
         throw error;
       }
     },
@@ -467,11 +485,13 @@ export function MainContent({
         }
 
         console.log("Delete successful, refreshing files");
-        // Refresh the file list
         await fetchFiles();
+        toast.success("File deleted");
       } catch (error) {
-        console.error("Delete error:", error);
         setError(
+          error instanceof Error ? error.message : "Failed to delete file",
+        );
+        toast.error(
           error instanceof Error ? error.message : "Failed to delete file",
         );
       }
@@ -618,9 +638,13 @@ export function MainContent({
       await fetchFolders();
       clearSelection();
       setBulkDeleteDialog({ isOpen: false, fileIds: [], folderIds: [] });
+      toast.success("Items deleted");
     } catch (error) {
       console.error("Bulk delete error:", error);
       setError(
+        error instanceof Error ? error.message : "Failed to delete items",
+      );
+      toast.error(
         error instanceof Error ? error.message : "Failed to delete items",
       );
     }
@@ -673,10 +697,12 @@ export function MainContent({
         if (data.success && data.folder) {
           // Add the new folder to the current list
           setFolders((prev) => [...prev, data.folder!]);
-          console.log("Folder created successfully:", data.folder.name);
+          toast.success("Folder created");
         }
       } catch (error) {
-        console.error("Create folder error:", error);
+        toast.error(
+          error instanceof Error ? error.message : "Failed to create folder",
+        );
         throw error;
       }
     },
@@ -763,13 +789,18 @@ export function MainContent({
           publicLink?: { url: string; token: string };
         };
 
-        console.log(`${shareDialog.itemType} shared successfully`);
+        toast.success(
+          `${shareDialog.itemType === "file" ? "File" : "Folder"} shared successfully`,
+        );
+        if (data.users.length > 0) {
+          toast.info("Share invitation sent");
+        }
         setShareDialog({ isOpen: false, item: null, itemType: "file" });
 
         // Return the result for the ShareDialog to use
         return result;
       } catch (error) {
-        console.error("Share error:", error);
+        toast.error(error instanceof Error ? error.message : "Failed to share");
         throw error;
       }
     },
@@ -866,6 +897,15 @@ export function MainContent({
       setFolderDeleteDialog({ isOpen: false, folderId: null, folderName: "" });
     }
   }, [folderDeleteDialog, fetchFolders]);
+
+  // System status indicator (network/API error)
+  useEffect(() => {
+    if (error) {
+      toast.error(error, { id: "system-error" });
+    } else {
+      toast.dismiss("system-error");
+    }
+  }, [error]);
 
   if (isLoading) {
     return (

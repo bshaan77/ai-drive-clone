@@ -17,6 +17,7 @@ import {
   UserButton,
 } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "~/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "Google Drive Clone",
@@ -56,6 +57,7 @@ export default function RootLayout({
             </SignedIn>
           </header>
           {children}
+          <Toaster />
         </body>
       </html>
     </ClerkProvider>
